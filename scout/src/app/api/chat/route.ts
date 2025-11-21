@@ -5,6 +5,8 @@ import {
   AIMessage,
   SystemMessage,
 } from "@langchain/core/messages";
+import { supabaseAdmin } from "@/lib/supabase";
+import { generateEmbedding } from "@/lib/embeddings";
 
 // Default system prompt for AI interviewer
 const DEFAULT_SYSTEM_PROMPT = `You are an experienced and empathetic AI interviewer. Your role is to conduct thoughtful, engaging interviews that help candidates showcase their skills and experience.
@@ -30,6 +32,9 @@ interface ChatRequest {
   message: string;
   history?: Message[];
   systemPrompt?: string;
+  useRAG?: boolean;
+  ragMatchCount?: number;
+  ragMatchThreshold?: number;
 }
 
 export async function POST(request: NextRequest) {
@@ -48,6 +53,9 @@ export async function POST(request: NextRequest) {
       message,
       history = [],
       systemPrompt = DEFAULT_SYSTEM_PROMPT,
+      useRAG = false,
+      ragMatchCount = 5,
+      ragMatchThreshold = 0.78,
     } = body;
 
     if (!message || message.trim().length === 0) {
@@ -55,6 +63,43 @@ export async function POST(request: NextRequest) {
         { error: "Message is required" },
         { status: 400 },
       );
+    }
+
+    // Retrieve relevant context using RAG if enabled
+    let relevantContext = "";
+    if (useRAG) {
+      try {
+        const queryEmbedding = await generateEmbedding(message);
+
+        const { data, error } = await supabaseAdmin.rpc(
+          "match_interview_documents",
+          {
+            query_embedding: queryEmbedding,
+            match_threshold: ragMatchThreshold,
+            match_count: ragMatchCount,
+          },
+        );
+
+        if (error) {
+          console.error("Error retrieving RAG context:", error);
+        } else if (data && data.length > 0) {
+          relevantContext =
+            "\n\nRelevant context from previous interviews:\n" +
+            data
+              .map(
+                (doc: {
+                  content: string;
+                  metadata: Record<string, unknown>;
+                  similarity: number;
+                }) =>
+                  `- ${doc.content} (relevance: ${(doc.similarity * 100).toFixed(1)}%)`,
+              )
+              .join("\n");
+        }
+      } catch (ragError) {
+        console.error("RAG retrieval error:", ragError);
+        // Continue without RAG context if there's an error
+      }
     }
 
     // Initialize model with API key
@@ -67,8 +112,11 @@ export async function POST(request: NextRequest) {
     // Convert history to LangChain message format
     const messages = [];
 
-    // Add system prompt
-    messages.push(new SystemMessage(systemPrompt));
+    // Add system prompt with RAG context if available
+    const enhancedSystemPrompt = relevantContext
+      ? `${systemPrompt}${relevantContext}`
+      : systemPrompt;
+    messages.push(new SystemMessage(enhancedSystemPrompt));
 
     // Add conversation history
     for (const msg of history) {
@@ -88,6 +136,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: response.content,
       success: true,
+      ragUsed: useRAG,
+      ragContextFound: relevantContext.length > 0,
     });
   } catch (error: any) {
     console.error("Chat error details:", {

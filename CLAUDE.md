@@ -219,6 +219,246 @@ export default function InterviewPage() {
 - Monitor API usage in Anthropic and OpenAI dashboards
 - Consider implementing conversation summarization for very long interviews
 
+## RAG (Retrieval Augmented Generation) with Supabase
+
+The application implements RAG using Supabase with pgvector for semantic search over interview transcripts and knowledge base content.
+
+### Architecture
+
+**Flow**: Store documents with embeddings → User query → Generate query embedding → Semantic search → Retrieve relevant context → Augment AI prompt → Generate response
+
+### Tech Stack
+
+- **Database**: Supabase (PostgreSQL)
+- **Vector Extension**: pgvector for similarity search
+- **Embeddings Model**: OpenAI text-embedding-ada-002 (1536 dimensions)
+- **Search Algorithm**: IVFFlat with cosine similarity
+
+### Database Schema
+
+The `interview_documents` table stores document embeddings:
+
+```sql
+create table interview_documents (
+  id uuid primary key,
+  content text not null,
+  embedding vector(1536),
+  metadata jsonb default '{}',
+  created_at timestamp with time zone,
+  updated_at timestamp with time zone
+);
+```
+
+**Indexes**:
+- IVFFlat index on embeddings for fast similarity search
+- GIN index on metadata for filtering
+
+### Components
+
+1. **Supabase Client** (`scout/src/lib/supabase.ts`)
+   - Client for browser-side operations
+   - Admin client with service role for server-side operations
+   - TypeScript interfaces for database types
+
+2. **Embedding Utilities** (`scout/src/lib/embeddings.ts`)
+   - `generateEmbedding()`: Generate single embedding
+   - `generateEmbeddings()`: Batch generate embeddings
+   - `splitTextIntoChunks()`: Split long documents
+   - `cosineSimilarity()`: Calculate similarity between vectors
+
+3. **Store API** (`scout/src/app/api/embeddings/store/route.ts`)
+   - POST: Store documents with embeddings
+   - GET: Retrieve stored documents
+   - DELETE: Remove documents
+   - Supports automatic text chunking for long documents
+
+4. **Search API** (`scout/src/app/api/embeddings/search/route.ts`)
+   - POST/GET: Semantic search across documents
+   - Returns most relevant documents with similarity scores
+   - Supports metadata filtering
+
+5. **Enhanced Chat API** (`scout/src/app/api/chat/route.ts`)
+   - Integrated RAG support with `useRAG` parameter
+   - Automatically retrieves relevant context
+   - Augments system prompt with retrieved documents
+
+### Configuration
+
+**Required Environment Variables**:
+```bash
+OPENAI_API_KEY=sk-your-api-key-here                        # For embeddings & Whisper
+ANTHROPIC_API_KEY=sk-ant-your-api-key-here                 # For Claude
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co  # Supabase URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key                # Public key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key            # Admin key
+```
+
+Add these to `.env.local` (see `.env.local.example` for reference)
+
+### Setting Up the Database
+
+1. Run the migration in Supabase SQL Editor:
+   ```bash
+   # Copy contents of supabase/migrations/001_create_embeddings_table.sql
+   # Paste into SQL Editor at https://lsdvjqxppkozoknoyock.supabase.co
+   # Click "Run"
+   ```
+
+2. Verify the migration:
+   ```sql
+   -- Check if pgvector extension is enabled
+   SELECT * FROM pg_extension WHERE extname = 'vector';
+
+   -- Check if table exists
+   SELECT * FROM interview_documents LIMIT 1;
+   ```
+
+See `supabase/migrations/README.md` for detailed instructions.
+
+### Usage Examples
+
+#### Storing Documents
+
+```typescript
+// Store a single document
+const response = await fetch('/api/embeddings/store', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    content: 'Interview transcript or knowledge base content...',
+    metadata: {
+      speaker: 'John Doe',
+      interview_id: 'interview-123',
+      timestamp: new Date().toISOString(),
+    },
+  }),
+});
+
+// Store a long document (auto-chunked)
+const response = await fetch('/api/embeddings/store', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    content: 'Very long document...',
+    splitIntoChunks: true,
+    metadata: { document_type: 'transcript' },
+  }),
+});
+```
+
+#### Semantic Search
+
+```typescript
+// Search for relevant documents
+const response = await fetch('/api/embeddings/search', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    query: 'What are the candidate\'s technical skills?',
+    matchThreshold: 0.78,  // Similarity threshold (0-1)
+    matchCount: 5,         // Max results
+    metadata: {            // Optional filtering
+      interview_id: 'interview-123',
+    },
+  }),
+});
+
+// Response format
+{
+  success: true,
+  results: [
+    {
+      id: 'uuid',
+      content: 'Document content...',
+      metadata: { ... },
+      similarity: 0.92  // Cosine similarity score
+    }
+  ]
+}
+```
+
+#### Using RAG with Chat API
+
+```typescript
+// Chat with RAG enabled
+const response = await fetch('/api/chat', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    message: 'What technical skills did the candidate mention?',
+    history: [],
+    useRAG: true,              // Enable RAG
+    ragMatchCount: 5,          // Number of documents to retrieve
+    ragMatchThreshold: 0.78,   // Similarity threshold
+  }),
+});
+
+// Response includes RAG status
+{
+  message: 'Based on the interview...',
+  success: true,
+  ragUsed: true,
+  ragContextFound: true
+}
+```
+
+### Similarity Search Function
+
+The database includes a custom `match_interview_documents` function for efficient similarity search:
+
+```sql
+SELECT * FROM match_interview_documents(
+  query_embedding := '[0.1, 0.2, ...]'::vector,
+  match_threshold := 0.78,
+  match_count := 5
+);
+```
+
+Returns documents sorted by similarity with scores.
+
+### Costs & Considerations
+
+**OpenAI Embeddings (text-embedding-ada-002)**:
+- Cost: ~$0.0001 per 1,000 tokens
+- Dimension: 1536
+- Max input: 8,191 tokens per request
+
+**Supabase**:
+- Free tier: 500MB database, 2GB bandwidth
+- Pro tier ($25/mo): 8GB database, 250GB bandwidth
+- pgvector operations are fast but require adequate database resources
+
+**Storage Estimates**:
+- Average embedding: ~6KB per document
+- 10,000 documents: ~60MB database storage
+
+### Best Practices
+
+1. **Chunking**: Split long documents (>8000 tokens) for better retrieval
+2. **Metadata**: Use metadata for filtering and organization
+3. **Threshold Tuning**: Adjust `matchThreshold` (0.7-0.85) based on precision needs
+4. **Indexing**: Ensure IVFFlat index is created for performance
+5. **Batch Operations**: Use `generateEmbeddings()` for bulk processing
+6. **Monitor Costs**: Track OpenAI embedding API usage
+7. **Regular Cleanup**: Remove outdated embeddings to manage database size
+
+### Troubleshooting
+
+**pgvector not enabled**:
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+**Slow searches**:
+- Check if IVFFlat index exists
+- Increase `lists` parameter in index creation
+- Consider upgrading Supabase plan for more compute
+
+**Low similarity scores**:
+- Lower `matchThreshold` (try 0.5-0.7)
+- Ensure embeddings are generated correctly
+- Verify content quality and relevance
+
 ## Development Workflow
 
 - Uses Next.js App Router architecture
