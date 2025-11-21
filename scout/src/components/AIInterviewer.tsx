@@ -101,12 +101,65 @@ export default function AIInterviewer() {
     }
   };
 
+  const downloadConversation = () => {
+    if (messages.length === 0) {
+      alert('No conversation to download yet!');
+      return;
+    }
+
+    // Format conversation as text
+    let conversationText = 'AI Interview Transcript\n';
+    conversationText += '='.repeat(50) + '\n';
+    conversationText += `Date: ${new Date().toLocaleString()}\n`;
+    conversationText += '='.repeat(50) + '\n\n';
+
+    messages.forEach((msg, index) => {
+      const speaker = msg.role === 'user' ? 'CANDIDATE' : 'AI INTERVIEWER';
+      const time = msg.timestamp.toLocaleTimeString();
+
+      conversationText += `[${time}] ${speaker}:\n`;
+      conversationText += `${msg.content}\n\n`;
+    });
+
+    // Create blob and download
+    const blob = new Blob([conversationText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+
+    // Generate filename with date
+    const dateStr = new Date().toISOString().split('T')[0];
+    link.download = `interview-transcript-${dateStr}.txt`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex flex-col h-screen max-w-4xl mx-auto p-4">
       {/* Header */}
-      <div className="mb-4">
-        <h1 className="text-3xl font-bold mb-2">AI Interviewer</h1>
-        <p className="text-gray-600">Speak naturally and the AI will respond</p>
+      <div className="mb-4 flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">AI Interviewer</h1>
+          <p className="text-gray-600">Speak naturally and the AI will respond</p>
+        </div>
+        <button
+          onClick={downloadConversation}
+          disabled={messages.length === 0}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            messages.length === 0
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-green-600 text-white hover:bg-green-700'
+          }`}
+          title="Download conversation transcript"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 inline-block mr-2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          </svg>
+          Download
+        </button>
       </div>
 
       {/* Chat Messages */}
