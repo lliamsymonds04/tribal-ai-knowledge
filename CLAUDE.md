@@ -35,6 +35,91 @@ scout/
 └── ...
 ```
 
+## API Routes (Vercel Deployment)
+
+API routes are created using Next.js Route Handlers in the App Router:
+
+- **Location**: `scout/src/app/api/[route-name]/route.ts`
+- **HTTP Methods**: Export named functions (GET, POST, PUT, DELETE, PATCH)
+- **Response**: Use `NextResponse` from `next/server`
+- **Deployment**: Automatically deployed as serverless functions on Vercel
+
+### Example Route Structure
+
+```typescript
+// scout/src/app/api/example/route.ts
+import { NextResponse } from 'next/server';
+
+export async function GET(request: Request) {
+  return NextResponse.json({ data: 'value' });
+}
+
+export async function POST(request: Request) {
+  const body = await request.json();
+  return NextResponse.json({ received: body });
+}
+```
+
+### Vercel Specifics
+
+- Each route automatically becomes a serverless function
+- Default region: Auto-selected based on deployment
+- Function timeout: 10s (Hobby), 60s (Pro)
+- No additional configuration needed for basic API routes
+- Environment variables accessible via `process.env`
+
+## Audio Transcription (OpenAI Whisper)
+
+The application includes audio recording and transcription functionality using OpenAI's Whisper model.
+
+### Architecture
+
+**Flow**: User records audio → Frontend sends to API → API calls OpenAI Whisper → Returns transcription
+
+### Components
+
+1. **AudioRecorder Component** (`scout/src/components/AudioRecorder.tsx`)
+   - Client-side React component using MediaRecorder API
+   - Records audio from user's microphone
+   - Displays recording status, timer, and transcription results
+   - Handles errors (permissions, file size, API failures)
+
+2. **Transcription API** (`scout/src/app/api/transcribe/route.ts`)
+   - Accepts POST requests with audio file (multipart/form-data)
+   - Validates file size (25MB limit) and format
+   - Forwards to OpenAI Whisper API
+   - Returns transcribed text as JSON
+
+### Configuration
+
+**Required Environment Variable**:
+```bash
+OPENAI_API_KEY=sk-your-api-key-here
+```
+
+Add this to `.env.local` (see `.env.local.example` for reference)
+
+### Supported Audio Formats
+
+- WebM (Chrome/Firefox default)
+- MP3, MP4, MPEG, MPGA, M4A, WAV
+
+### Limitations & Costs
+
+- Maximum file size: 25MB (OpenAI limit)
+- Cost: ~$0.006 per minute of audio
+- Processing time: Usually 2-10 seconds depending on audio length
+
+### Usage
+
+```tsx
+import AudioRecorder from '@/components/AudioRecorder';
+
+export default function Page() {
+  return <AudioRecorder />;
+}
+```
+
 ## Development Workflow
 
 - Uses Next.js App Router architecture
