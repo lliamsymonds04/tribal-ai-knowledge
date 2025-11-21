@@ -223,8 +223,7 @@ export default function AIInterviewer() {
       {/* Header */}
       <div className="mb-4 flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold mb-2">AI Interviewer</h1>
-          <p className="text-gray-600">Speak or type your responses</p>
+          <h1 className="text-3xl font-bold mb-2 font-jetbrains">Scout</h1>
           {isPlayingAudio && (
             <div className="flex items-center space-x-2 mt-2">
               <div className="flex space-x-1">
@@ -280,7 +279,7 @@ export default function AIInterviewer() {
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[70%] rounded-lg p-4 ${
+              className={`drop-shadow-lg drop-shadow-black/5 max-w-[70%] rounded-lg p-4 ${
                 msg.role === 'user'
                   ? 'bg-blue-600 text-white'
                   : 'bg-white border border-gray-200'
