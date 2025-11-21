@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import AudioRecorder from './AudioRecorder';
+import AvatarDisplay from './AvatarDisplay';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -14,7 +15,10 @@ export default function AIInterviewer() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [textInput, setTextInput] = useState<string>('');
+  const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
+  const [ttsAvailable, setTtsAvailable] = useState<boolean>(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -50,6 +54,62 @@ export default function AIInterviewer() {
 
     initializeInterview();
   }, []);
+
+  const playTTS = async (text: string) => {
+    if (!ttsAvailable) return;
+
+    try {
+      setIsPlayingAudio(true);
+
+      // Call TTS API
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        if (data.available === false) {
+          setTtsAvailable(false);
+          console.log('TTS not available (API key not configured)');
+        }
+        return;
+      }
+
+      // Create audio from response
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      // Create and play audio element
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        setIsPlayingAudio(false);
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.onerror = () => {
+        setIsPlayingAudio(false);
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      await audio.play();
+
+    } catch (error) {
+      console.error('TTS playback error:', error);
+      setIsPlayingAudio(false);
+    }
+  };
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsPlayingAudio(false);
+    }
+  };
 
   const handleUserMessage = async (messageText: string) => {
     try {
@@ -88,6 +148,11 @@ export default function AIInterviewer() {
       };
 
       setMessages(prev => [...prev, aiMessage]);
+
+      // Play TTS for AI response (if available)
+      if (ttsAvailable) {
+        await playTTS(chatData.message);
+      }
 
     } catch (err: any) {
       console.error('Chat error:', err);
@@ -160,22 +225,51 @@ export default function AIInterviewer() {
         <div>
           <h1 className="text-3xl font-bold mb-2">AI Interviewer</h1>
           <p className="text-gray-600">Speak or type your responses</p>
+          {isPlayingAudio && (
+            <div className="flex items-center space-x-2 mt-2">
+              <div className="flex space-x-1">
+                <div className="w-1 h-4 bg-blue-600 rounded-full animate-pulse"></div>
+                <div className="w-1 h-4 bg-blue-600 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-1 h-4 bg-blue-600 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+              </div>
+              <span className="text-sm text-blue-600">AI is speaking...</span>
+            </div>
+          )}
         </div>
-        <button
-          onClick={downloadConversation}
-          disabled={messages.length === 0}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            messages.length === 0
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-green-600 text-white hover:bg-green-700'
-          }`}
-          title="Download conversation transcript"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 inline-block mr-2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-          </svg>
-          Download
-        </button>
+        <div className="flex space-x-2">
+          {isPlayingAudio && (
+            <button
+              onClick={stopAudio}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              title="Stop audio"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 inline-block mr-2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 7.5A2.25 2.25 0 017.5 5.25h9a2.25 2.25 0 012.25 2.25v9a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9z" />
+              </svg>
+              Stop
+            </button>
+          )}
+          <button
+            onClick={downloadConversation}
+            disabled={messages.length === 0}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              messages.length === 0
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-green-600 text-white hover:bg-green-700'
+            }`}
+            title="Download conversation transcript"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 inline-block mr-2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Download
+          </button>
+        </div>
+      </div>
+
+      {/* Avatar Display */}
+      <div className="mb-4">
+        <AvatarDisplay />
       </div>
 
       {/* Chat Messages */}
