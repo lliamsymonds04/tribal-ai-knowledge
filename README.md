@@ -57,7 +57,7 @@ Scout makes knowledge capture effortless through:
 - **Responsive Design**: Works on any device
 - **Real-time Feedback**: Visual indicators for all actions
 - **Modern Design**: Clean, professional interface with Tailwind CSS
-
+Eleven Labs API error: {"detail":{"status":"model_deprecated_free_tier","message":"Model is not available on the free tier. The eleven_monolingual_v1 and eleven_multilingual_v1 models are removed from free tier. Please migrate to newer models for continued service."}}
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router)
