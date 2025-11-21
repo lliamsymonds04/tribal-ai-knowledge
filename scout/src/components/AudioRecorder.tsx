@@ -157,7 +157,7 @@ export default function AudioRecorder({
           <>
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
-              <span className="text-lg font-mono">
+              <span className="text-red-500 text-lg font-mono">
                 {formatTime(recordingTime)}
               </span>
             </div>
@@ -173,7 +173,7 @@ export default function AudioRecorder({
         {recordingState === "processing" && (
           <div className="flex items-center space-x-2">
             <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            <span>Transcribing...</span>
+            <span className="text-gray-600 animate-pulse">Transcribing...</span>
           </div>
         )}
       </div>
