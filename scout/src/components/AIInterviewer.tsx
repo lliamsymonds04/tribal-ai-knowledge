@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import AudioRecorder from './AudioRecorder';
 
 interface Message {
@@ -194,7 +195,29 @@ export default function AIInterviewer() {
               <div className="text-xs opacity-70 mb-1">
                 {msg.role === 'user' ? 'You' : 'AI Interviewer'}
               </div>
-              <p className="whitespace-pre-wrap">{msg.content}</p>
+              {msg.role === 'user' ? (
+                <p className="whitespace-pre-wrap">{msg.content}</p>
+              ) : (
+                <div className="markdown-content">
+                  <ReactMarkdown
+                    components={{
+                      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                      ul: ({ children }) => <ul className="list-disc ml-4 mb-2">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal ml-4 mb-2">{children}</ol>,
+                      li: ({ children }) => <li className="mb-1">{children}</li>,
+                      strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+                      em: ({ children }) => <em className="italic">{children}</em>,
+                      code: ({ children }) => <code className="bg-gray-100 px-1 py-0.5 rounded text-sm">{children}</code>,
+                      pre: ({ children }) => <pre className="bg-gray-100 p-2 rounded overflow-x-auto mb-2">{children}</pre>,
+                      h1: ({ children }) => <h1 className="text-xl font-bold mb-2">{children}</h1>,
+                      h2: ({ children }) => <h2 className="text-lg font-bold mb-2">{children}</h2>,
+                      h3: ({ children }) => <h3 className="text-base font-bold mb-2">{children}</h3>,
+                    }}
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
+                </div>
+              )}
             </div>
           </div>
         ))}
