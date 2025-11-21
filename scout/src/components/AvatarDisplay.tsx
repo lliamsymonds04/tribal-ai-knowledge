@@ -1,11 +1,17 @@
 'use client';
 
-export default function AvatarDisplay() {
+interface AvatarDisplayProps {
+  isSpeaking?: boolean;
+}
+
+export default function AvatarDisplay({ isSpeaking = false }: AvatarDisplayProps) {
   return (
     <div className="w-full h-64 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center relative overflow-hidden">
       {/* Placeholder Avatar */}
       <div className="text-center">
-        <div className="w-32 h-32 mx-auto mb-4 bg-gray-700 rounded-full flex items-center justify-center">
+        <div className={`w-32 h-32 mx-auto mb-4 bg-gray-700 rounded-full flex items-center justify-center transition-all ${
+          isSpeaking ? 'ring-4 ring-blue-500 ring-opacity-50 animate-pulse' : ''
+        }`}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -21,7 +27,9 @@ export default function AvatarDisplay() {
             />
           </svg>
         </div>
-        <p className="text-gray-400 text-sm">Avatar Placeholder</p>
+        <p className="text-gray-400 text-sm">
+          {isSpeaking ? 'Speaking...' : 'Avatar Placeholder'}
+        </p>
       </div>
 
       {/* Decorative Elements */}

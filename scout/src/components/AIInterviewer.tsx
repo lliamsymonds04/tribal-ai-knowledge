@@ -269,7 +269,7 @@ export default function AIInterviewer() {
 
       {/* Avatar Display */}
       <div className="mb-4">
-        <AvatarDisplay />
+        <AvatarDisplay isSpeaking={isPlayingAudio} />
       </div>
 
       {/* Chat Messages */}
