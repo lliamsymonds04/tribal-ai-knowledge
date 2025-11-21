@@ -133,7 +133,7 @@ The application features an AI interviewer powered by Claude via LangChain, with
 - **LangChain**: Framework for building LLM applications
   - `@langchain/anthropic`: Claude integration
   - `@langchain/core`: Core abstractions (messages, prompts)
-- **Claude Model**: claude-3-5-sonnet-20241022
+- **Claude Model**: claude-3-5-sonnet-20240620
 - **Conversation Memory**: Full history maintained in component state
 
 ### Components
@@ -208,7 +208,7 @@ export default function InterviewPage() {
 **Claude API**:
 - Input: ~$3 per million tokens
 - Output: ~$15 per million tokens
-- Model: claude-3-5-sonnet-20241022
+- Model: claude-3-5-sonnet-20240620
 
 **Conversation History**: Full history sent with each request (token usage increases over time)
 

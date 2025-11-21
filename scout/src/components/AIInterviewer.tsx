@@ -12,6 +12,7 @@ interface Message {
 export default function AIInterviewer() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [textInput, setTextInput] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -49,14 +50,14 @@ export default function AIInterviewer() {
     initializeInterview();
   }, []);
 
-  const handleTranscription = async (transcribedText: string) => {
+  const handleUserMessage = async (messageText: string) => {
     try {
       setIsProcessing(true);
 
       // Add user message to history
       const userMessage: Message = {
         role: 'user',
-        content: transcribedText,
+        content: messageText,
         timestamp: new Date(),
       };
 
@@ -67,7 +68,7 @@ export default function AIInterviewer() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: transcribedText,
+          message: messageText,
           history: messages.map(m => ({ role: m.role, content: m.content })),
         }),
       });
@@ -98,6 +99,20 @@ export default function AIInterviewer() {
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleTextSubmit = () => {
+    if (!textInput.trim() || isProcessing) return;
+
+    handleUserMessage(textInput);
+    setTextInput('');
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleTextSubmit();
     }
   };
 
@@ -143,7 +158,7 @@ export default function AIInterviewer() {
       <div className="mb-4 flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold mb-2">AI Interviewer</h1>
-          <p className="text-gray-600">Speak naturally and the AI will respond</p>
+          <p className="text-gray-600">Speak or type your responses</p>
         </div>
         <button
           onClick={downloadConversation}
@@ -196,15 +211,41 @@ export default function AIInterviewer() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Audio Recorder Controls */}
+      {/* Input Controls */}
       <div className="bg-white border-t border-gray-200 p-4 rounded-lg">
-        <AudioRecorder
-          onTranscriptionComplete={handleTranscription}
-          hideTranscription={true}
-          showTitle={false}
-          startButtonText="Start Speaking"
-          stopButtonText="Stop Speaking"
-        />
+        <div className="flex items-center space-x-3">
+          {/* Voice Input */}
+          <div className="shrink-0">
+            <AudioRecorder
+              onTranscriptionComplete={handleUserMessage}
+              hideTranscription={true}
+              showTitle={false}
+              startButtonText="🎤 Speak"
+              stopButtonText="⏹ Stop"
+            />
+          </div>
+
+          {/* Divider */}
+          <div className="h-10 w-px bg-gray-300"></div>
+
+          {/* Text Input */}
+          <input
+            type="text"
+            value={textInput}
+            onChange={(e) => setTextInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Or type your message..."
+            disabled={isProcessing}
+            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          />
+          <button
+            onClick={handleTextSubmit}
+            disabled={!textInput.trim() || isProcessing}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+          >
+            Send
+          </button>
+        </div>
       </div>
     </div>
   );
