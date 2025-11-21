@@ -120,6 +120,105 @@ export default function Page() {
 }
 ```
 
+## AI Interviewer (LangChain + Claude)
+
+The application features an AI interviewer powered by Claude via LangChain, with full conversation history and voice input.
+
+### Architecture
+
+**Flow**: User speaks → Audio transcribed → Sent to Claude with history → AI responds → Display + repeat
+
+### Tech Stack
+
+- **LangChain**: Framework for building LLM applications
+  - `@langchain/anthropic`: Claude integration
+  - `@langchain/core`: Core abstractions (messages, prompts)
+- **Claude Model**: claude-3-5-sonnet-20241022
+- **Conversation Memory**: Full history maintained in component state
+
+### Components
+
+1. **AIInterviewer Component** (`scout/src/components/AIInterviewer.tsx`)
+   - Combines audio recording with conversational AI
+   - Maintains full conversation history
+   - Auto-scrolling chat interface
+   - States: idle → recording → transcribing → processing → idle
+   - Initializes with AI greeting on mount
+
+2. **Chat API** (`scout/src/app/api/chat/route.ts`)
+   - Accepts POST with message and conversation history
+   - Uses LangChain's ChatAnthropic for Claude integration
+   - Converts messages to LangChain format (HumanMessage, AIMessage, SystemMessage)
+   - Returns AI response as JSON
+   - Supports custom system prompts
+
+### Configuration
+
+**Required Environment Variables**:
+```bash
+OPENAI_API_KEY=sk-your-api-key-here          # For Whisper transcription
+ANTHROPIC_API_KEY=sk-ant-your-api-key-here   # For Claude via LangChain
+```
+
+Add these to `.env.local` (see `.env.local.example` for reference)
+
+### System Prompt
+
+The default system prompt configures Claude as an empathetic interviewer. You can customize it by passing a `systemPrompt` parameter to the chat API:
+
+```typescript
+// Custom system prompt example
+const response = await fetch('/api/chat', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    message: 'Hello',
+    history: [],
+    systemPrompt: 'You are a technical interviewer specializing in software engineering...'
+  }),
+});
+```
+
+### Conversation Flow
+
+1. User clicks "Start Speaking" → Microphone activates
+2. User speaks → Timer shows recording duration
+3. User clicks "Stop Speaking" → Audio processing begins
+4. Audio transcribed via Whisper API
+5. Transcription sent to Claude with full conversation history
+6. Claude's response displayed in chat
+7. Repeat from step 1
+
+### Usage
+
+```tsx
+import AIInterviewer from '@/components/AIInterviewer';
+
+export default function InterviewPage() {
+  return <AIInterviewer />;
+}
+```
+
+### Costs & Limitations
+
+**Audio Transcription**:
+- ~$0.006 per minute (Whisper)
+- 25MB max file size
+
+**Claude API**:
+- Input: ~$3 per million tokens
+- Output: ~$15 per million tokens
+- Model: claude-3-5-sonnet-20241022
+
+**Conversation History**: Full history sent with each request (token usage increases over time)
+
+### Best Practices
+
+- Keep interviews reasonably short to manage token costs
+- Clear conversation history for new interview sessions
+- Monitor API usage in Anthropic and OpenAI dashboards
+- Consider implementing conversation summarization for very long interviews
+
 ## Development Workflow
 
 - Uses Next.js App Router architecture

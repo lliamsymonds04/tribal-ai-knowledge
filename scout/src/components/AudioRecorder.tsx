@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef } from "react";
 
-type RecordingState = 'idle' | 'recording' | 'processing';
+type RecordingState = "idle" | "recording" | "processing";
 
 interface TranscriptionResponse {
   text: string;
@@ -10,10 +10,24 @@ interface TranscriptionResponse {
   error?: string;
 }
 
-export default function AudioRecorder() {
-  const [recordingState, setRecordingState] = useState<RecordingState>('idle');
-  const [transcription, setTranscription] = useState<string>('');
-  const [error, setError] = useState<string>('');
+interface AudioRecorderProps {
+  onTranscriptionComplete?: (transcription: string) => void;
+  hideTranscription?: boolean;
+  showTitle?: boolean;
+  startButtonText?: string;
+  stopButtonText?: string;
+}
+
+export default function AudioRecorder({
+  onTranscriptionComplete,
+  hideTranscription = false,
+  showTitle = true,
+  startButtonText = "Start Recording",
+  stopButtonText = "Stop Recording",
+}: AudioRecorderProps = {}) {
+  const [recordingState, setRecordingState] = useState<RecordingState>("idle");
+  const [transcription, setTranscription] = useState<string>("");
+  const [error, setError] = useState<string>("");
   const [recordingTime, setRecordingTime] = useState<number>(0);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -22,8 +36,8 @@ export default function AudioRecorder() {
 
   const startRecording = async () => {
     try {
-      setError('');
-      setTranscription('');
+      setError("");
+      setTranscription("");
       setRecordingTime(0);
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -38,34 +52,37 @@ export default function AudioRecorder() {
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/webm",
+        });
 
         // Stop all tracks to release microphone
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
 
         await sendAudioForTranscription(audioBlob);
       };
 
       mediaRecorder.start();
-      setRecordingState('recording');
+      setRecordingState("recording");
 
       // Start timer
       timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
+        setRecordingTime((prev) => prev + 1);
       }, 1000);
-
     } catch (err: any) {
-      console.error('Error starting recording:', err);
-      setError(err.name === 'NotAllowedError'
-        ? 'Microphone access denied. Please allow microphone access in your browser settings.'
-        : 'Failed to start recording. Please check your microphone.');
+      console.error("Error starting recording:", err);
+      setError(
+        err.name === "NotAllowedError"
+          ? "Microphone access denied. Please allow microphone access in your browser settings."
+          : "Failed to start recording. Please check your microphone.",
+      );
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && recordingState === 'recording') {
+    if (mediaRecorderRef.current && recordingState === "recording") {
       mediaRecorderRef.current.stop();
-      setRecordingState('processing');
+      setRecordingState("processing");
 
       // Clear timer
       if (timerRef.current) {
@@ -80,97 +97,103 @@ export default function AudioRecorder() {
       // Check file size (25MB limit)
       const maxSize = 25 * 1024 * 1024;
       if (audioBlob.size > maxSize) {
-        setError('Recording is too large (max 25MB). Please record a shorter audio.');
-        setRecordingState('idle');
+        setError(
+          "Recording is too large (max 25MB). Please record a shorter audio.",
+        );
+        setRecordingState("idle");
         return;
       }
 
       const formData = new FormData();
-      formData.append('audio', audioBlob, 'recording.webm');
+      formData.append("audio", audioBlob, "recording.webm");
 
-      const response = await fetch('/api/transcribe', {
-        method: 'POST',
+      const response = await fetch("/api/transcribe", {
+        method: "POST",
         body: formData,
       });
 
       const data: TranscriptionResponse = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to transcribe audio');
+        throw new Error(data.error || "Failed to transcribe audio");
       }
 
       setTranscription(data.text);
-      setRecordingState('idle');
+      setRecordingState("idle");
 
+      // Call callback if provided
+      if (onTranscriptionComplete) {
+        onTranscriptionComplete(data.text);
+      }
     } catch (err: any) {
-      console.error('Transcription error:', err);
-      setError(err.message || 'Failed to transcribe audio. Please try again.');
-      setRecordingState('idle');
+      console.error("Transcription error:", err);
+      setError(err.message || "Failed to transcribe audio. Please try again.");
+      setRecordingState("idle");
     }
   };
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-6 space-y-4">
-      <div className="flex flex-col items-center space-y-4">
-        <h2 className="text-2xl font-bold">Audio Transcription</h2>
+    <div className="w-full space-y-4">
+      {showTitle && <h2 className="text-2xl font-bold">Audio Transcription</h2>}
 
-        {/* Recording Controls */}
-        <div className="flex items-center space-x-4">
-          {recordingState === 'idle' && (
-            <button
-              onClick={startRecording}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Start Recording
-            </button>
-          )}
-
-          {recordingState === 'recording' && (
-            <>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
-                <span className="text-lg font-mono">{formatTime(recordingTime)}</span>
-              </div>
-              <button
-                onClick={stopRecording}
-                className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Stop Recording
-              </button>
-            </>
-          )}
-
-          {recordingState === 'processing' && (
-            <div className="flex items-center space-x-2">
-              <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-              <span>Transcribing...</span>
-            </div>
-          )}
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="w-full p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-            {error}
-          </div>
+      {/* Recording Controls */}
+      <div className="flex items-center space-x-4">
+        {recordingState === "idle" && (
+          <button
+            onClick={startRecording}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            {startButtonText}
+          </button>
         )}
 
-        {/* Transcription Result */}
-        {transcription && (
-          <div className="w-full space-y-2">
-            <h3 className="text-lg font-semibold">Transcription:</h3>
-            <div className="p-4 bg-gray-100 rounded-lg border border-gray-300">
-              <p className="text-gray-800">{transcription}</p>
+        {recordingState === "recording" && (
+          <>
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
+              <span className="text-lg font-mono">
+                {formatTime(recordingTime)}
+              </span>
             </div>
+            <button
+              onClick={stopRecording}
+              className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              {stopButtonText}
+            </button>
+          </>
+        )}
+
+        {recordingState === "processing" && (
+          <div className="flex items-center space-x-2">
+            <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <span>Transcribing...</span>
           </div>
         )}
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="w-full p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {/* Transcription Result */}
+      {!hideTranscription && transcription && (
+        <div className="w-full space-y-2">
+          <h3 className="text-lg font-semibold">Transcription:</h3>
+          <div className="p-4 bg-gray-100 rounded-lg border border-gray-300">
+            <p className="text-gray-800">{transcription}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
