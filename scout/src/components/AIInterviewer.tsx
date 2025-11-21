@@ -292,7 +292,7 @@ export default function AIInterviewer() {
               {msg.role === 'user' ? (
                 <p className="whitespace-pre-wrap">{msg.content}</p>
               ) : (
-                <div className="markdown-content">
+                <div className="text-black">
                   <ReactMarkdown
                     components={{
                       p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
@@ -353,7 +353,7 @@ export default function AIInterviewer() {
             onKeyPress={handleKeyPress}
             placeholder="Or type your message..."
             disabled={isProcessing}
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="text-black flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
           <button
             onClick={handleTextSubmit}
