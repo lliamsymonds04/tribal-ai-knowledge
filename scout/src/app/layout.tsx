@@ -20,6 +20,11 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Scout - Tremendous Tribal Knowledge",
   description: "AI-powered knowledge capture with Trump explaining your organization's tribal knowledge. The best knowledge base, believe me.",
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({
