@@ -14,13 +14,20 @@ interface Message {
 
 export default function KnowledgeExtractor() {
   const router = useRouter();
+
+  // Check if TTS is enabled via environment variable
+  const ttsEnabled = process.env.NEXT_PUBLIC_ENABLE_TTS === 'true';
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [textInput, setTextInput] = useState<string>('');
   const [ragMatchThreshold, setRagMatchThreshold] = useState<number>(0.65);
   const [ragMatchCount, setRagMatchCount] = useState<number>(5);
+  const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
+  const [ttsAvailable, setTtsAvailable] = useState<boolean>(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -36,6 +43,62 @@ export default function KnowledgeExtractor() {
     };
     setMessages([systemMessage]);
   }, []);
+
+  const playTTS = async (text: string) => {
+    if (!ttsAvailable) return;
+
+    try {
+      setIsPlayingAudio(true);
+
+      // Call TTS API
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        if (data.available === false) {
+          setTtsAvailable(false);
+          console.log('TTS not available (API key not configured)');
+        }
+        return;
+      }
+
+      // Create audio from response
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      // Create and play audio element
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        setIsPlayingAudio(false);
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.onerror = () => {
+        setIsPlayingAudio(false);
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      await audio.play();
+
+    } catch (error) {
+      console.error('TTS playback error:', error);
+      setIsPlayingAudio(false);
+    }
+  };
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsPlayingAudio(false);
+    }
+  };
 
   const handleQuery = async (queryText: string) => {
     try {
@@ -97,6 +160,11 @@ When explaining knowledge:
       };
 
       setMessages(prev => [...prev, aiMessage]);
+
+      // Play TTS for AI response (if available and enabled)
+      if (ttsEnabled && ttsAvailable) {
+        await playTTS(chatData.message);
+      }
 
     } catch (err: any) {
       console.error('Query error:', err);
@@ -205,8 +273,30 @@ When explaining knowledge:
           <div>
             <h1 className="text-3xl font-bold mb-2 font-jetbrains text-white">🧭 Scout Knowledge Search</h1>
             <p className="text-gray-400">Search organizational knowledge from employee interviews using AI-powered RAG</p>
+            {isPlayingAudio && (
+              <div className="flex items-center space-x-2 mt-2">
+                <div className="flex space-x-1">
+                  <div className="w-1 h-4 bg-blue-600 rounded-full animate-pulse"></div>
+                  <div className="w-1 h-4 bg-blue-600 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-1 h-4 bg-blue-600 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                </div>
+                <span className="text-sm text-blue-400">Trump is speaking...</span>
+              </div>
+            )}
           </div>
           <div className="flex space-x-2">
+            {isPlayingAudio && (
+              <button
+                onClick={stopAudio}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                title="Stop audio"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 inline-block mr-2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 7.5A2.25 2.25 0 017.5 5.25h9a2.25 2.25 0 012.25 2.25v9a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9z" />
+                </svg>
+                Stop
+              </button>
+            )}
             <button
               onClick={() => router.push('/')}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
