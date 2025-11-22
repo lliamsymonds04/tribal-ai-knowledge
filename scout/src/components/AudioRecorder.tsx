@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 type RecordingState = "idle" | "recording" | "processing";
 
@@ -29,10 +29,40 @@ export default function AudioRecorder({
   const [transcription, setTranscription] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [recordingTime, setRecordingTime] = useState<number>(0);
+  const [isErrorFadingOut, setIsErrorFadingOut] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (error) {
+      setIsErrorFadingOut(false);
+
+      // Clear any existing timeout
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+
+      // Start fade out after 4 seconds
+      errorTimeoutRef.current = setTimeout(() => {
+        setIsErrorFadingOut(true);
+
+        // Remove error completely after fade out animation
+        setTimeout(() => {
+          setError("");
+          setIsErrorFadingOut(false);
+        }, 300);
+      }, 4000);
+    }
+
+    return () => {
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+    };
+  }, [error]);
 
   const startRecording = async () => {
     try {
@@ -157,7 +187,7 @@ export default function AudioRecorder({
           <>
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
-              <span className="text-lg font-mono">
+              <span className="text-red-500 text-lg font-mono">
                 {formatTime(recordingTime)}
               </span>
             </div>
@@ -173,15 +203,21 @@ export default function AudioRecorder({
         {recordingState === "processing" && (
           <div className="flex items-center space-x-2">
             <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            <span>Transcribing...</span>
+            <span className="text-gray-600 animate-pulse">Transcribing...</span>
           </div>
         )}
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="w-full p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-          {error}
+        <div
+          className={`absolute top-8 left-1/2 -translate-x-1/2 w-auto max-w-md px-6 py-4 bg-red-500 text-white rounded-lg shadow-lg z-50 ${
+            isErrorFadingOut
+              ? "animate-[fadeOut_0.3s_ease-out]"
+              : "animate-[fadeIn_0.3s_ease-out]"
+          }`}
+        >
+          <div className="text-center text-sm font-medium">{error}</div>
         </div>
       )}
 
