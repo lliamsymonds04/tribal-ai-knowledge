@@ -150,7 +150,7 @@ When explaining knowledge:
         throw new Error(chatData.error || 'Failed to get response from AI');
       }
 
-      // Add AI response to history
+      // Add Trump's response to history
       const aiMessage: Message = {
         role: 'assistant',
         content: chatData.message,
@@ -161,7 +161,7 @@ When explaining knowledge:
 
       setMessages(prev => [...prev, aiMessage]);
 
-      // Play TTS for AI response (if available and enabled)
+      // Play TTS for Trump's response (if available and enabled)
       if (ttsEnabled && ttsAvailable) {
         await playTTS(chatData.message);
       }
@@ -230,7 +230,7 @@ When explaining knowledge:
     messages.forEach((msg) => {
       if (msg.role === 'system') return;
 
-      const speaker = msg.role === 'user' ? 'QUERY' : 'AI RESPONSE';
+      const speaker = msg.role === 'user' ? 'QUERY' : 'TRUMP\'S RESPONSE';
       const time = msg.timestamp.toLocaleTimeString();
 
       conversationText += `[${time}] ${speaker}:\n`;
@@ -300,7 +300,7 @@ When explaining knowledge:
             <button
               onClick={() => router.push('/')}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-              title="Go back to AI Interviewer"
+              title="Go back to Trump Interview"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 inline-block mr-2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
@@ -374,7 +374,7 @@ When explaining knowledge:
             >
               {msg.role !== 'system' && (
                 <div className="text-xs opacity-70 mb-1">
-                  {msg.role === 'user' ? 'Your Query' : 'AI Response'}
+                  {msg.role === 'user' ? 'Your Query' : 'Trump'}
                   {msg.ragUsed !== undefined && (
                     <span className="ml-2">
                       {msg.ragContextFound ? '✅ Context Found' : '⚠️ No Context'}
