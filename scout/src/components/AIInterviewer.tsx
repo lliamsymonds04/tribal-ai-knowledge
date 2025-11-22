@@ -21,6 +21,8 @@ export default function AIInterviewer() {
   const [ttsAvailable, setTtsAvailable] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [interviewStarted, setInterviewStarted] = useState<boolean>(false);
+  const [initialGreeting, setInitialGreeting] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [error, setError] = useState<string>("");
@@ -61,9 +63,9 @@ export default function AIInterviewer() {
     };
   }, [error]);
 
-  // Send initial greeting when component mounts
+  // Fetch initial greeting when component mounts (but don't play TTS yet)
   useEffect(() => {
-    const initializeInterview = async () => {
+    const fetchGreeting = async () => {
       try {
         const response = await fetch('/api/chat', {
           method: 'POST',
@@ -77,23 +79,14 @@ export default function AIInterviewer() {
         const data = await response.json();
 
         if (response.ok) {
-          setMessages([{
-            role: 'assistant',
-            content: data.message,
-            timestamp: new Date(),
-          }]);
-
-          // Play TTS for initial greeting
-          if (ttsAvailable) {
-            await playTTS(data.message);
-          }
+          setInitialGreeting(data.message);
         }
       } catch (err) {
-        console.error('Failed to initialize interview:', err);
+        console.error('Failed to fetch initial greeting:', err);
       }
     };
 
-    initializeInterview();
+    fetchGreeting();
   }, []);
 
   const playTTS = async (text: string) => {
@@ -149,6 +142,25 @@ export default function AIInterviewer() {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       setIsPlayingAudio(false);
+    }
+  };
+
+  const handleStartInterview = async () => {
+    // Set interview as started
+    setInterviewStarted(true);
+
+    // Add initial greeting to messages
+    if (initialGreeting) {
+      setMessages([{
+        role: 'assistant',
+        content: initialGreeting,
+        timestamp: new Date(),
+      }]);
+
+      // Play TTS for initial greeting (user interaction allows autoplay)
+      if (ttsAvailable) {
+        await playTTS(initialGreeting);
+      }
     }
   };
 
@@ -321,6 +333,32 @@ export default function AIInterviewer() {
     }
   };
 
+  // Show start screen if interview hasn't started
+  if (!interviewStarted) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen max-w-4xl mx-auto p-4">
+        <div className="text-center mb-8">
+          <h1 className="text-5xl font-bold mb-4 font-jetbrains">Scout</h1>
+          <p className="text-xl text-gray-600 mb-8">AI Interview Assistant</p>
+          <p className="text-gray-500 mb-8 max-w-md">
+            Click the button below to begin your interview. The AI interviewer will greet you and guide you through the conversation.
+          </p>
+        </div>
+        <button
+          onClick={handleStartInterview}
+          disabled={!initialGreeting}
+          className={`px-8 py-4 text-lg font-bold rounded-lg transition-all transform hover:scale-105 ${
+            initialGreeting
+              ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}
+        >
+          {initialGreeting ? 'Start Interview' : 'Loading...'}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen max-w-4xl mx-auto p-4">
       {/* Error Toast */}
@@ -386,11 +424,10 @@ export default function AIInterviewer() {
           <button
             onClick={downloadConversation}
             disabled={messages.length === 0}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              messages.length === 0
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${messages.length === 0
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-green-600 text-white hover:bg-green-700'
-            }`}
+              }`}
             title="Download conversation transcript"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 inline-block mr-2">
@@ -424,8 +461,7 @@ export default function AIInterviewer() {
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`drop-shadow-lg drop-shadow-black/5 max-w-[70%] rounded-lg p-4 ${
-                msg.role === 'user'
+              className={`drop-shadow-lg drop-shadow-black/5 max-w-[70%] rounded-lg p-4 ${msg.role === 'user'
                   ? 'bg-blue-600 text-white'
                   : 'bg-secondary text-white border border-border'
               }`}
