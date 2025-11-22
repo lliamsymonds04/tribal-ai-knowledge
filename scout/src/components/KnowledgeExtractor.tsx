@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
+import AudioRecorder from './AudioRecorder';
 
 interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -25,6 +26,7 @@ export default function KnowledgeExtractor() {
   const [ragMatchCount, setRagMatchCount] = useState<number>(5);
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
   const [ttsAvailable, setTtsAvailable] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -42,6 +44,16 @@ export default function KnowledgeExtractor() {
       timestamp: new Date(),
     };
     setMessages([systemMessage]);
+  }, []);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
   }, []);
 
   const playTTS = async (text: string) => {
@@ -130,9 +142,9 @@ export default function KnowledgeExtractor() {
 Persona & style:
 - Use big, dramatic language: "tremendous", "huge", "the best", "total disaster", "believe me"
 - Occasionally refer to yourself in the third person ("Donald J. Trump knows all about this")
-- Be confident, showy, and boastful about the knowledge in our database
+- Be confident, showy, and boastful
 - No emojis
-- React dramatically: "This process is absolutely beautiful" or "That's a total disaster, believe me"
+- React dramatically: "That process is absolutely beautiful" or "Those issues? Total disaster, believe me"
 
 When explaining knowledge:
 - Pull information from the retrieved context and present it with Trump flair
@@ -199,6 +211,11 @@ When explaining knowledge:
     }
   };
 
+  const handleVoiceInput = async (transcription: string) => {
+    if (!transcription.trim() || isProcessing) return;
+    await handleQuery(transcription);
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -260,14 +277,14 @@ When explaining knowledge:
 
   // Example queries
   const exampleQueries = [
+    "What tech stacks and tools did teams use at the hackathon?",
+    "What were the biggest challenges teams faced during the hackathon?",
     "How do we handle customer escalations?",
     "What's the process for onboarding new team members?",
-    "Who has expertise with our main client accounts?",
-    "What troubleshooting steps are recommended for common issues?",
   ];
 
   return (
-    <div className="flex flex-col h-screen max-w-6xl mx-auto p-4">
+    <div className="flex flex-col h-screen max-w-6xl mx-auto p-4 overflow-x-hidden">
       {/* Header */}
       <div className="mb-4">
         <div className="flex justify-between items-start mb-4">
@@ -443,28 +460,42 @@ When explaining knowledge:
       )}
 
       {/* Input Controls */}
-      <div className="bg-primary border-t border-border p-4 rounded-lg">
-        <div className="relative">
-          <textarea
-            ref={textareaRef}
-            value={textInput}
-            onChange={handleTextChange}
-            onKeyPress={handleKeyPress}
-            placeholder="Ask about processes, expertise, client knowledge, or institutional wisdom..."
-            disabled={isProcessing}
-            rows={1}
-            className="bg-tertiary text-white w-full px-4 py-3 pr-24 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed resize-none placeholder:text-gray-500 min-h-[48px] max-h-[200px] overflow-y-auto"
-          />
-          <button
-            onClick={handleTextSubmit}
-            disabled={!textInput.trim() || isProcessing}
-            className="absolute bottom-2 right-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium text-sm"
-          >
-            Search
-          </button>
+      <div className="bg-primary border-t border-border p-2 sm:p-4 rounded-lg">
+        <div className="flex items-end space-x-1 sm:space-x-2">
+          <div className="flex-1 min-w-0 relative">
+            <textarea
+              ref={textareaRef}
+              value={textInput}
+              onChange={handleTextChange}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask about organizational knowledge..."
+              disabled={isProcessing}
+              rows={1}
+              className="bg-tertiary text-white w-full min-w-0 px-2 sm:px-4 py-2 sm:py-3 pr-16 sm:pr-24 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed resize-none placeholder:text-gray-500 min-h-[44px] sm:min-h-[48px] max-h-[200px] overflow-y-auto text-sm sm:text-base"
+            />
+            <button
+              onClick={handleTextSubmit}
+              disabled={!textInput.trim() || isProcessing}
+              className="absolute bottom-1.5 sm:bottom-2 right-1.5 sm:right-2 px-2 sm:px-4 py-1 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium text-xs sm:text-sm whitespace-nowrap"
+            >
+              Search
+            </button>
+          </div>
+          {/* Voice Input */}
+          <div className="shrink-0 flex-none">
+            <AudioRecorder
+              onTranscriptionComplete={handleVoiceInput}
+              hideTranscription={true}
+              showTitle={false}
+              error={error}
+              setError={setError}
+            />
+          </div>
         </div>
         <p className="text-xs text-gray-400 mt-2">
-          Press Enter to search, Shift+Enter for new line
+          <span className="hidden sm:inline">Press Enter to search, Shift+Enter for new line • </span>
+          <span className="sm:hidden">Enter to search • </span>
+          Or use voice 🎤
         </p>
       </div>
     </div>
