@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 
 type RecordingState = "idle" | "recording" | "processing";
 
@@ -16,6 +17,8 @@ interface AudioRecorderProps {
   showTitle?: boolean;
   startButtonText?: string;
   stopButtonText?: string;
+  error?: string;
+  setError?: (error: string) => void;
 }
 
 export default function AudioRecorder({
@@ -24,10 +27,11 @@ export default function AudioRecorder({
   showTitle = true,
   startButtonText = "Start Recording",
   stopButtonText = "Stop Recording",
+  error = "",
+  setError = () => {}
 }: AudioRecorderProps = {}) {
   const [recordingState, setRecordingState] = useState<RecordingState>("idle");
   const [transcription, setTranscription] = useState<string>("");
-  const [error, setError] = useState<string>("");
   const [recordingTime, setRecordingTime] = useState<number>(0);
   const [isErrorFadingOut, setIsErrorFadingOut] = useState(false);
 
@@ -62,7 +66,7 @@ export default function AudioRecorder({
         clearTimeout(errorTimeoutRef.current);
       }
     };
-  }, [error]);
+  }, [error, setError]);
 
   const startRecording = async () => {
     try {
@@ -179,48 +183,33 @@ export default function AudioRecorder({
             onClick={startRecording}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            {startButtonText}
+          <Image src="record_icon.svg" alt="Start Recording" width={24} height={24}/>
           </button>
         )}
 
         {recordingState === "recording" && (
           <>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
-              <span className="text-red-500 text-lg font-mono">
-                {formatTime(recordingTime)}
-              </span>
-            </div>
             <button
               onClick={stopRecording}
-              className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              className="animate-pulse px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
             >
-              {stopButtonText}
+                <Image src="stop_icon.svg" alt="Stop Recording" width={24} height={24}/>
             </button>
           </>
         )}
 
         {recordingState === "processing" && (
-          <div className="flex items-center space-x-2">
+          <>
+            <button
+              onClick={stopRecording}
+              className="px-6 py-3 bg-gray-300
+              text-white rounded-lg hover:bg-gray-300 transition-colors"
+            >
             <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            <span className="text-gray-600 animate-pulse">Transcribing...</span>
-          </div>
+            </button>
+          </>
         )}
       </div>
-
-      {/* Error Message */}
-      {error && (
-        <div
-          className={`absolute top-8 left-1/2 -translate-x-1/2 w-auto max-w-md px-6 py-4 bg-red-500 text-white rounded-lg shadow-lg z-50 ${
-            isErrorFadingOut
-              ? "animate-[fadeOut_0.3s_ease-out]"
-              : "animate-[fadeIn_0.3s_ease-out]"
-          }`}
-        >
-          <div className="text-center text-sm font-medium">{error}</div>
-        </div>
-      )}
-
       {/* Transcription Result */}
       {!hideTranscription && transcription && (
         <div className="w-full space-y-2">
