@@ -140,7 +140,8 @@ When explaining knowledge:
 - If multiple people mentioned something, say things like "Everyone's talking about this, believe me"
 - Make it clear when the information comes from our "tremendous" knowledge base
 - If no information found, react dramatically: "Nobody's talked about this yet - total disaster! We need to capture this knowledge immediately"
-- Keep answers focused and useful, but with maximum dramatic personality`,
+- Keep answers focused and useful, but with maximum dramatic personality
+- Respond in 1-2 paragraphs at most`,
         }),
       });
 
