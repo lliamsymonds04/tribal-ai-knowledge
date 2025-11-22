@@ -158,6 +158,8 @@ The application features an AI interviewer powered by Claude via LangChain, with
 ```bash
 OPENAI_API_KEY=sk-your-api-key-here          # For Whisper transcription
 ANTHROPIC_API_KEY=sk-ant-your-api-key-here   # For Claude via LangChain
+HUME_API_KEY=your-hume-api-key-here          # Optional: For TTS voice responses
+HUME_VOICE_ID=your-voice-clone-id-here       # Optional: Your custom voice clone
 ```
 
 Add these to `.env.local` (see `.env.local.example` for reference)
@@ -218,6 +220,136 @@ export default function InterviewPage() {
 - Clear conversation history for new interview sessions
 - Monitor API usage in Anthropic and OpenAI dashboards
 - Consider implementing conversation summarization for very long interviews
+
+## Text-to-Speech (Hume AI Octave)
+
+The application includes text-to-speech functionality using Hume AI's Octave TTS model with custom voice cloning support.
+
+### Architecture
+
+**Flow**: AI generates response → Text sent to Hume API → Voice clone synthesizes speech → Audio returned and played
+
+### Tech Stack
+
+- **TTS Provider**: Hume AI Octave
+- **API Endpoint**: `/v0/tts/file` (synchronous file response)
+- **Voice**: Custom voice clone (created in Hume platform)
+- **Audio Format**: MP3
+
+### Components
+
+1. **TTS API** (`scout/src/app/api/tts/route.ts`)
+   - Accepts POST requests with text
+   - Validates Hume API key and voice ID configuration
+   - Calls Hume AI Octave TTS API with voice clone ID
+   - Returns audio file as MP3
+   - Optional voiceId parameter to override default voice
+
+2. **AIInterviewer Component** (`scout/src/components/AIInterviewer.tsx`)
+   - Automatically calls TTS API for AI responses
+   - Plays audio using Web Audio API
+   - Shows speaking indicator during playback
+   - Stop button to interrupt audio playback
+
+### Configuration
+
+**Required Environment Variables**:
+```bash
+HUME_API_KEY=your-hume-api-key-here          # From https://platform.hume.ai/settings/keys
+HUME_VOICE_ID=your-voice-clone-id-here       # From https://platform.hume.ai/voice
+```
+
+Add these to `.env.local` (see `.env.local.example` for reference)
+
+### Creating a Voice Clone
+
+1. Visit [Hume AI Platform](https://platform.hume.ai/voice)
+2. Click "Create Voice Clone"
+3. Record at least 15 seconds of clear audio (or upload audio file)
+4. Follow the guided recording session (typically <30 seconds total)
+5. Copy the voice ID from the Voice Library
+6. Add the voice ID to your `.env.local` as `HUME_VOICE_ID`
+
+### API Request Format
+
+```typescript
+// Example TTS request
+const response = await fetch('/api/tts', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    text: 'Hello, this is my custom voice clone speaking!',
+    voiceId: 'optional-override-voice-id', // Optional: override default voice
+  }),
+});
+
+// Returns audio/mpeg blob
+const audioBlob = await response.blob();
+```
+
+### Hume API Details
+
+The TTS API uses Hume's synchronous file endpoint with the following structure:
+
+```json
+{
+  "version": "2",
+  "utterances": [
+    {
+      "text": "Your text here",
+      "voice": {
+        "id": "your-voice-clone-id"
+      }
+    }
+  ]
+}
+```
+
+Authentication is done via the `X-Hume-Api-Key` header.
+
+### Features
+
+- **High-Quality Voice Cloning**: Create realistic voice clones with just 15 seconds of audio
+- **Emotion-Aware Speech**: Octave understands context and delivers emotionally appropriate speech
+- **Low Latency**: Fast synthesis for real-time conversational applications
+- **Graceful Degradation**: If API key not configured, app continues to work without TTS
+
+### Costs & Limitations
+
+**Hume AI Octave TTS**:
+- Pricing available at [Hume AI pricing page](https://www.hume.ai/pricing)
+- Voice clones require initial recording session
+- No per-minute charges for voice clone creation (one-time setup)
+
+**Character Limits**:
+- Maximum 5,000 characters per utterance
+- Maximum 1,000 characters for voice descriptions (if using voice design)
+
+### Best Practices
+
+1. **Voice Clone Quality**: Use clear, high-quality audio for best voice cloning results
+2. **Error Handling**: App gracefully handles missing API keys (disables TTS)
+3. **Audio Playback**: Users can stop audio mid-playback with stop button
+4. **Monitor Usage**: Track API usage in Hume AI dashboard
+5. **Voice Selection**: Store voice ID in environment variables for consistency
+
+### Troubleshooting
+
+**TTS not working**:
+- Verify `HUME_API_KEY` is set correctly in `.env.local`
+- Verify `HUME_VOICE_ID` is set with valid voice clone ID
+- Check API key permissions in Hume platform
+- Check browser console for API error messages
+
+**Poor voice quality**:
+- Re-record voice clone with better audio quality
+- Use quiet environment for voice clone recording
+- Ensure 15+ seconds of clear, consistent speech
+
+**Audio not playing**:
+- Check browser audio permissions
+- Verify audio format compatibility (MP3)
+- Check network tab for failed API requests
 
 ## RAG (Retrieval Augmented Generation) with Supabase
 

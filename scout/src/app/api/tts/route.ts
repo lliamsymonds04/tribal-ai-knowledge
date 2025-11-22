@@ -1,29 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Eleven Labs API endpoint
-const ELEVEN_LABS_API_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
-
-// Default voice ID
-const DEFAULT_VOICE_ID = 'CwhRBWXzGAHq8TQ4Fs17';
+// Hume AI Octave TTS API endpoint
+const HUME_TTS_API_URL = 'https://api.hume.ai/v0/tts/file';
 
 interface TTSRequest {
   text: string;
   voiceId?: string;
+  speed?: number;
 }
 
 export async function POST(request: NextRequest) {
   try {
     // Check if API key is provided
-    if (!process.env.ELEVENLABS_API_KEY) {
-      console.log('ELEVENLABS_API_KEY not set, TTS disabled');
+    if (!process.env.HUME_API_KEY) {
+      console.log('HUME_API_KEY not set, TTS disabled');
       return NextResponse.json(
         { error: 'TTS is not configured', available: false },
         { status: 200 } // Return 200 so it doesn't break the app
       );
     }
 
+    // Check if voice ID is configured
+    if (!process.env.HUME_VOICE_ID) {
+      console.log('HUME_VOICE_ID not set, TTS disabled');
+      return NextResponse.json(
+        { error: 'Voice clone not configured', available: false },
+        { status: 200 }
+      );
+    }
+
     const body: TTSRequest = await request.json();
-    const { text, voiceId = DEFAULT_VOICE_ID } = body;
+    const { text, voiceId, speed } = body;
 
     if (!text || text.trim().length === 0) {
       return NextResponse.json(
@@ -32,31 +39,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call Eleven Labs API
-    const response = await fetch(`${ELEVEN_LABS_API_URL}/${voiceId}`, {
+    // Use custom voiceId if provided, otherwise use environment variable
+    const selectedVoiceId = voiceId || process.env.HUME_VOICE_ID;
+
+    // Default speed to 1.5x for faster speech (can be overridden)
+    const selectedSpeed = speed !== undefined ? speed : 1.5;
+
+    // Call Hume AI Octave TTS API
+    const response = await fetch(HUME_TTS_API_URL, {
       method: 'POST',
       headers: {
-        'Accept': 'audio/mpeg',
+        'X-Hume-Api-Key': process.env.HUME_API_KEY,
         'Content-Type': 'application/json',
-        'xi-api-key': process.env.ELEVENLABS_API_KEY,
       },
       body: JSON.stringify({
-        text: text,
-        model_id: 'eleven_turbo_v2_5',
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
-        },
+        version: '2',
+        utterances: [
+          {
+            text: text,
+            voice: {
+              id: selectedVoiceId,
+            },
+            speed: selectedSpeed,
+          },
+        ],
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('Eleven Labs API error:', errorData);
+      console.error('Hume AI API error:', errorData);
 
       if (response.status === 401) {
         return NextResponse.json(
-          { error: 'Invalid Eleven Labs API key' },
+          { error: 'Invalid Hume AI API key' },
           { status: 500 }
         );
       }
