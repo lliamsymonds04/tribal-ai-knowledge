@@ -21,17 +21,51 @@ export default function AIInterviewer() {
   const [ttsAvailable, setTtsAvailable] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [interviewStarted, setInterviewStarted] = useState<boolean>(false);
+  const [initialGreeting, setInitialGreeting] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [error, setError] = useState<string>("");
+  const [isErrorFadingOut, setIsErrorFadingOut] = useState(false);
+  const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Send initial greeting when component mounts
+  // Handle error toast fade out
   useEffect(() => {
-    const initializeInterview = async () => {
+    if (error) {
+      setIsErrorFadingOut(false);
+
+      // Clear any existing timeout
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+
+      // Start fade out after 4 seconds
+      errorTimeoutRef.current = setTimeout(() => {
+        setIsErrorFadingOut(true);
+
+        // Remove error completely after fade out animation
+        setTimeout(() => {
+          setError("");
+          setIsErrorFadingOut(false);
+        }, 300);
+      }, 4000);
+    }
+
+    return () => {
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+    };
+  }, [error]);
+
+  // Fetch initial greeting when component mounts (but don't play TTS yet)
+  useEffect(() => {
+    const fetchGreeting = async () => {
       try {
         const response = await fetch('/api/chat', {
           method: 'POST',
@@ -45,23 +79,14 @@ export default function AIInterviewer() {
         const data = await response.json();
 
         if (response.ok) {
-          setMessages([{
-            role: 'assistant',
-            content: data.message,
-            timestamp: new Date(),
-          }]);
-
-          // Play TTS for initial greeting
-          if (ttsAvailable) {
-            await playTTS(data.message);
-          }
+          setInitialGreeting(data.message);
         }
       } catch (err) {
-        console.error('Failed to initialize interview:', err);
+        console.error('Failed to fetch initial greeting:', err);
       }
     };
 
-    initializeInterview();
+    fetchGreeting();
   }, []);
 
   // Auto-save when messages change
@@ -133,6 +158,25 @@ export default function AIInterviewer() {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       setIsPlayingAudio(false);
+    }
+  };
+
+  const handleStartInterview = async () => {
+    // Set interview as started
+    setInterviewStarted(true);
+
+    // Add initial greeting to messages
+    if (initialGreeting) {
+      setMessages([{
+        role: 'assistant',
+        content: initialGreeting,
+        timestamp: new Date(),
+      }]);
+
+      // Play TTS for initial greeting (user interaction allows autoplay)
+      if (ttsAvailable) {
+        await playTTS(initialGreeting);
+      }
     }
   };
 
@@ -299,8 +343,52 @@ export default function AIInterviewer() {
     }
   };
 
+  // Show start screen if interview hasn't started
+  if (!interviewStarted) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen max-w-4xl mx-auto p-4">
+        <div className="text-center mb-8">
+          <h1 className="text-5xl font-bold mb-4 font-jetbrains">Scout</h1>
+          <p className="text-xl text-gray-600 mb-8">AI Interview Assistant</p>
+          <p className="text-gray-500 mb-8 max-w-md">
+            Click the button below to begin your interview. The AI interviewer will greet you and guide you through the conversation.
+          </p>
+        </div>
+        <button
+          onClick={handleStartInterview}
+          disabled={!initialGreeting}
+          className={`px-8 py-4 text-lg font-bold rounded-lg transition-all transform hover:scale-105 ${
+            initialGreeting
+              ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}
+        >
+          {initialGreeting ? 'Start Interview' : 'Loading...'}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen max-w-4xl mx-auto p-4">
+      {/* Error Toast */}
+      {error && (
+        <div
+          className={`fixed top-8 left-1/2 -translate-x-1/2 w-auto max-w-md px-6 py-4 text-white rounded-lg bg-red-500 border border-red-700 shadow-lg z-50 ${
+            isErrorFadingOut
+              ? "animate-[fadeOut_0.3s_ease-out]"
+              : "animate-[fadeIn_0.3s_ease-out]"
+          }`}
+        >
+          <div className="flex items-center space-x-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 flex-shrink-0">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <div className="text-sm font-medium">{error}</div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-4 flex justify-between items-start">
         <div>
@@ -346,11 +434,10 @@ export default function AIInterviewer() {
           <button
             onClick={downloadConversation}
             disabled={messages.length === 0}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              messages.length === 0
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${messages.length === 0
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-green-600 text-white hover:bg-green-700'
-            }`}
+              }`}
             title="Download conversation transcript"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 inline-block mr-2">
@@ -377,17 +464,16 @@ export default function AIInterviewer() {
       </div>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto mb-4 space-y-4 bg-gray-50 rounded-lg p-4">
+      <div className="flex-1 overflow-y-auto mb-4 space-y-4 bg-primary rounded-lg p-4">
         {messages.map((msg, index) => (
           <div
             key={index}
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`drop-shadow-lg drop-shadow-black/5 max-w-[70%] rounded-lg p-4 ${
-                msg.role === 'user'
+              className={`drop-shadow-lg drop-shadow-black/5 max-w-[70%] rounded-lg p-4 ${msg.role === 'user'
                   ? 'bg-blue-600 text-white'
-                  : 'bg-white border border-gray-200'
+                  : 'bg-secondary text-white border border-border'
               }`}
             >
               <div className="text-xs opacity-70 mb-1">
@@ -396,7 +482,7 @@ export default function AIInterviewer() {
               {msg.role === 'user' ? (
                 <p className="whitespace-pre-wrap">{msg.content}</p>
               ) : (
-                <div className="text-black">
+                <div className="text-white">
                   <ReactMarkdown
                     components={{
                       p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
@@ -433,21 +519,8 @@ export default function AIInterviewer() {
       </div>
 
       {/* Input Controls */}
-      <div className="bg-white border-t border-gray-200 p-4 rounded-lg">
+      <div className="bg-primary border-t border-border p-4 rounded-lg">
         <div className="flex items-center space-x-3">
-          {/* Voice Input */}
-          <div className="shrink-0">
-            <AudioRecorder
-              onTranscriptionComplete={handleUserMessage}
-              hideTranscription={true}
-              showTitle={false}
-              startButtonText="🎤 Speak"
-              stopButtonText="⏹ Stop"
-            />
-          </div>
-
-          {/* Divider */}
-          <div className="h-10 w-px bg-gray-300"></div>
 
           {/* Text Input */}
           <input
@@ -457,7 +530,7 @@ export default function AIInterviewer() {
             onKeyPress={handleKeyPress}
             placeholder="Or type your message..."
             disabled={isProcessing}
-            className="text-black flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="bg-tertiary flex-1 px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
           <button
             onClick={handleTextSubmit}
@@ -466,6 +539,16 @@ export default function AIInterviewer() {
           >
             Send
           </button>
+          {/* Voice Input */}
+          <div className="shrink-0">
+            <AudioRecorder
+              onTranscriptionComplete={handleUserMessage}
+              hideTranscription={true}
+              showTitle={false}
+              error={error}
+              setError={setError}
+            />
+          </div>
         </div>
       </div>
     </div>
