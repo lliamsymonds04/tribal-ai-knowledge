@@ -14,6 +14,10 @@ interface Message {
 
 export default function AIInterviewer() {
   const router = useRouter();
+
+  // Check if TTS is enabled via environment variable
+  const ttsEnabled = process.env.NEXT_PUBLIC_ENABLE_TTS === 'true';
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [textInput, setTextInput] = useState<string>('');
@@ -174,7 +178,7 @@ export default function AIInterviewer() {
       }]);
 
       // Play TTS for initial greeting (user interaction allows autoplay)
-      if (ttsAvailable) {
+      if (ttsEnabled && ttsAvailable) {
         await playTTS(initialGreeting);
       }
     }
@@ -218,8 +222,8 @@ export default function AIInterviewer() {
 
       setMessages(prev => [...prev, aiMessage]);
 
-      // Play TTS for AI response (if available)
-      if (ttsAvailable) {
+      // Play TTS for AI response (if available and enabled)
+      if (ttsEnabled && ttsAvailable) {
         await playTTS(chatData.message);
       }
 
