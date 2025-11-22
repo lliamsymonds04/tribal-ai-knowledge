@@ -20,6 +20,7 @@ export default function KnowledgeExtractor() {
   const [ragMatchThreshold, setRagMatchThreshold] = useState<number>(0.65);
   const [ragMatchCount, setRagMatchCount] = useState<number>(5);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -30,7 +31,7 @@ export default function KnowledgeExtractor() {
   useEffect(() => {
     const systemMessage: Message = {
       role: 'system',
-      content: '🧭 **Scout Knowledge Search** - Ask questions about organizational knowledge captured from employee interviews. Search through processes, expertise, client relationships, and institutional wisdom.',
+      content: '**Scout Knowledge Search** - I\'m here to explain your organizational knowledge - and nobody, I mean NOBODY, explains things better than me, believe me. Ask me about processes, client knowledge, troubleshooting, anything from our tremendous database. It\'s going to be huge.',
       timestamp: new Date(),
     };
     setMessages([systemMessage]);
@@ -61,15 +62,22 @@ export default function KnowledgeExtractor() {
           useRAG: true,
           ragMatchThreshold: ragMatchThreshold,
           ragMatchCount: ragMatchCount,
-          systemPrompt: `You are Scout, an AI assistant helping organizations access tribal knowledge captured from employee interviews. Your role is to help users find and understand organizational processes, expertise, client relationships, and institutional wisdom.
+          systemPrompt: `You are an over-the-top, clearly fictional version of Donald J. Trump, explaining organizational knowledge from our database.
 
-When answering:
-- Provide specific, actionable information from the retrieved knowledge
-- If multiple employees or interviews mention the topic, synthesize the information clearly
-- Cite specific processes, approaches, or insights when available
-- Help preserve valuable organizational knowledge for onboarding, training, and succession planning
-- If no relevant information is found, suggest related topics or encourage more knowledge capture
-- Be concise but thorough in your responses`,
+Persona & style:
+- Use big, dramatic language: "tremendous", "huge", "the best", "total disaster", "believe me"
+- Occasionally refer to yourself in the third person ("Donald J. Trump knows all about this")
+- Be confident, showy, and boastful about the knowledge in our database
+- No emojis
+- React dramatically: "This process is absolutely beautiful" or "That's a total disaster, believe me"
+
+When explaining knowledge:
+- Pull information from the retrieved context and present it with Trump flair
+- ALWAYS brag about how brilliant you are at understanding or doing what's being asked about
+- If multiple people mentioned something, say things like "Everyone's talking about this, believe me"
+- Make it clear when the information comes from our "tremendous" knowledge base
+- If no information found, react dramatically: "Nobody's talked about this yet - total disaster! We need to capture this knowledge immediately"
+- Keep answers focused and useful, but with maximum dramatic personality`,
         }),
       });
 
@@ -107,6 +115,19 @@ When answering:
     if (!textInput.trim() || isProcessing) return;
     handleQuery(textInput);
     setTextInput('');
+    // Reset textarea height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+  };
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setTextInput(e.target.value);
+    // Auto-resize textarea
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -119,7 +140,7 @@ When answering:
   const clearConversation = () => {
     const systemMessage: Message = {
       role: 'system',
-      content: '🧭 **Scout Knowledge Search** - Ask questions about organizational knowledge captured from employee interviews. Search through processes, expertise, client relationships, and institutional wisdom.',
+      content: '**Scout Knowledge Search** - I\'m here to explain your organizational knowledge - and nobody, I mean NOBODY, explains things better than me, believe me. Ask me about processes, client knowledge, troubleshooting, anything from our tremendous database. It\'s going to be huge.',
       timestamp: new Date(),
     };
     setMessages([systemMessage]);
@@ -182,8 +203,8 @@ When answering:
       <div className="mb-4">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h1 className="text-3xl font-bold mb-2">🧭 Scout Knowledge Search</h1>
-            <p className="text-gray-600">Search organizational knowledge from employee interviews using AI-powered RAG</p>
+            <h1 className="text-3xl font-bold mb-2 font-jetbrains text-white">🧭 Scout Knowledge Search</h1>
+            <p className="text-gray-400">Search organizational knowledge from employee interviews using AI-powered RAG</p>
           </div>
           <div className="flex space-x-2">
             <button
@@ -207,10 +228,10 @@ When answering:
         </div>
 
         {/* RAG Settings */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-secondary border border-border rounded-lg p-4">
           <div className="flex items-center space-x-6">
             <div className="flex items-center space-x-2">
-              <label htmlFor="threshold" className="text-sm font-medium text-blue-900">
+              <label htmlFor="threshold" className="text-sm font-medium text-gray-300">
                 Similarity Threshold:
               </label>
               <input
@@ -221,12 +242,12 @@ When answering:
                 step="0.01"
                 value={ragMatchThreshold}
                 onChange={(e) => setRagMatchThreshold(parseFloat(e.target.value))}
-                className="w-20 px-2 py-1 border border-blue-300 rounded text-sm text-black"
+                className="w-20 px-2 py-1 bg-tertiary border border-border rounded text-sm text-white"
               />
-              <span className="text-xs text-blue-700">(0.3-0.9)</span>
+              <span className="text-xs text-gray-400">(0.3-0.9)</span>
             </div>
             <div className="flex items-center space-x-2">
-              <label htmlFor="count" className="text-sm font-medium text-blue-900">
+              <label htmlFor="count" className="text-sm font-medium text-gray-300">
                 Max Results:
               </label>
               <input
@@ -236,7 +257,7 @@ When answering:
                 max="20"
                 value={ragMatchCount}
                 onChange={(e) => setRagMatchCount(parseInt(e.target.value))}
-                className="w-16 px-2 py-1 border border-blue-300 rounded text-sm text-black"
+                className="w-16 px-2 py-1 bg-tertiary border border-border rounded text-sm text-white"
               />
             </div>
           </div>
@@ -244,7 +265,7 @@ When answering:
       </div>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto mb-4 space-y-4 bg-gray-50 rounded-lg p-4">
+      <div className="flex-1 overflow-y-auto mb-4 space-y-4 bg-primary rounded-lg p-4">
         {messages.map((msg, index) => (
           <div
             key={index}
@@ -253,12 +274,12 @@ When answering:
             }`}
           >
             <div
-              className={`max-w-[80%] rounded-lg p-4 ${
+              className={`max-w-[80%] rounded-lg p-4 drop-shadow-lg drop-shadow-black/5 ${
                 msg.role === 'user'
                   ? 'bg-blue-600 text-white'
                   : msg.role === 'system'
-                  ? 'bg-purple-100 border border-purple-300 text-purple-900 w-full'
-                  : 'bg-white border border-gray-200'
+                  ? 'bg-secondary border border-border text-gray-300 w-full'
+                  : 'bg-secondary text-white border border-border'
               }`}
             >
               {msg.role !== 'system' && (
@@ -274,7 +295,7 @@ When answering:
               {msg.role === 'user' ? (
                 <p className="whitespace-pre-wrap">{msg.content}</p>
               ) : (
-                <div className={msg.role === 'system' ? 'text-purple-900' : 'text-black'}>
+                <div className={msg.role === 'system' ? 'text-gray-300' : 'text-white'}>
                   <ReactMarkdown
                     components={{
                       p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
@@ -299,10 +320,10 @@ When answering:
         ))}
         {isProcessing && (
           <div className="flex justify-start">
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="bg-secondary border border-border rounded-lg p-4">
               <div className="flex items-center space-x-2">
                 <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                <span className="text-gray-600">Searching knowledge base...</span>
+                <span className="text-gray-300">Searching knowledge base...</span>
               </div>
             </div>
           </div>
@@ -313,7 +334,7 @@ When answering:
       {/* Example Queries */}
       {messages.length === 1 && (
         <div className="mb-4">
-          <p className="text-sm font-medium text-gray-700 mb-2">Try these example queries:</p>
+          <p className="text-sm font-medium text-gray-300 mb-2">Try these example queries:</p>
           <div className="grid grid-cols-2 gap-2">
             {exampleQueries.map((query, idx) => (
               <button
@@ -321,7 +342,7 @@ When answering:
                 onClick={() => {
                   setTextInput(query);
                 }}
-                className="text-left px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-blue-400 transition-colors text-sm text-gray-700"
+                className="text-left px-3 py-2 bg-secondary border border-border rounded-lg hover:bg-tertiary hover:border-blue-400 transition-colors text-sm text-gray-300"
               >
                 💡 {query}
               </button>
@@ -331,26 +352,27 @@ When answering:
       )}
 
       {/* Input Controls */}
-      <div className="bg-white border-t border-gray-200 p-4 rounded-lg">
-        <div className="flex items-end space-x-3">
+      <div className="bg-primary border-t border-border p-4 rounded-lg">
+        <div className="relative">
           <textarea
+            ref={textareaRef}
             value={textInput}
-            onChange={(e) => setTextInput(e.target.value)}
+            onChange={handleTextChange}
             onKeyPress={handleKeyPress}
             placeholder="Ask about processes, expertise, client knowledge, or institutional wisdom..."
             disabled={isProcessing}
-            rows={3}
-            className="text-black flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed resize-none"
+            rows={1}
+            className="bg-tertiary text-white w-full px-4 py-3 pr-24 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed resize-none placeholder:text-gray-500 min-h-[48px] max-h-[200px] overflow-y-auto"
           />
           <button
             onClick={handleTextSubmit}
             disabled={!textInput.trim() || isProcessing}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium h-[72px]"
+            className="absolute bottom-2 right-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium text-sm"
           >
-            🔍 Search
+            Search
           </button>
         </div>
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-gray-400 mt-2">
           Press Enter to search, Shift+Enter for new line
         </p>
       </div>
