@@ -17,7 +17,7 @@ export default function KnowledgeExtractor() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [textInput, setTextInput] = useState<string>('');
-  const [ragMatchThreshold, setRagMatchThreshold] = useState<number>(0.78);
+  const [ragMatchThreshold, setRagMatchThreshold] = useState<number>(0.65);
   const [ragMatchCount, setRagMatchCount] = useState<number>(5);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -202,18 +202,6 @@ When answering:
             >
               🔄 Clear
             </button>
-            <button
-              onClick={downloadConversation}
-              disabled={messages.length <= 1}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                messages.length <= 1
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-green-600 text-white hover:bg-green-700'
-              }`}
-              title="Download conversation"
-            >
-              📥 Download
-            </button>
           </div>
         </div>
 
@@ -227,14 +215,14 @@ When answering:
               <input
                 id="threshold"
                 type="number"
-                min="0"
-                max="1"
+                min="0.3"
+                max="0.9"
                 step="0.01"
                 value={ragMatchThreshold}
                 onChange={(e) => setRagMatchThreshold(parseFloat(e.target.value))}
                 className="w-20 px-2 py-1 border border-blue-300 rounded text-sm text-black"
               />
-              <span className="text-xs text-blue-700">(0.5-0.9)</span>
+              <span className="text-xs text-blue-700">(0.3-0.9)</span>
             </div>
             <div className="flex items-center space-x-2">
               <label htmlFor="count" className="text-sm font-medium text-blue-900">
