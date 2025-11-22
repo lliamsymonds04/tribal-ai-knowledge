@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
     // Use custom voiceId if provided, otherwise use environment variable
     const selectedVoiceId = voiceId || process.env.HUME_VOICE_ID;
 
-    // Default speed to 1.5x for faster speech (can be overridden)
-    const selectedSpeed = speed !== undefined ? speed : 1.5;
+    // Default speed to 1x for faster speech (can be overridden)
+    const selectedSpeed = speed !== undefined ? speed : 1;
 
     // Call Hume AI Octave TTS API
     const response = await fetch(HUME_TTS_API_URL, {
