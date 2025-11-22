@@ -30,7 +30,7 @@ export default function KnowledgeExtractor() {
   useEffect(() => {
     const systemMessage: Message = {
       role: 'system',
-      content: '🔍 **Knowledge Extractor** - Ask questions about stored interview data and the AI will search through all stored knowledge to find relevant answers.',
+      content: '🧭 **Scout Knowledge Search** - Ask questions about organizational knowledge captured from employee interviews. Search through processes, expertise, client relationships, and institutional wisdom.',
       timestamp: new Date(),
     };
     setMessages([systemMessage]);
@@ -61,13 +61,14 @@ export default function KnowledgeExtractor() {
           useRAG: true,
           ragMatchThreshold: ragMatchThreshold,
           ragMatchCount: ragMatchCount,
-          systemPrompt: `You are a knowledge extraction assistant. Your role is to help users find and understand information from stored interview transcripts and knowledge base documents.
+          systemPrompt: `You are Scout, an AI assistant helping organizations access tribal knowledge captured from employee interviews. Your role is to help users find and understand organizational processes, expertise, client relationships, and institutional wisdom.
 
 When answering:
-- Provide specific, factual information from the retrieved documents
-- If multiple candidates or interviews are relevant, organize information clearly
-- Cite specific details when available (skills mentioned, experiences, responses)
-- If no relevant information is found, say so clearly
+- Provide specific, actionable information from the retrieved knowledge
+- If multiple employees or interviews mention the topic, synthesize the information clearly
+- Cite specific processes, approaches, or insights when available
+- Help preserve valuable organizational knowledge for onboarding, training, and succession planning
+- If no relevant information is found, suggest related topics or encourage more knowledge capture
 - Be concise but thorough in your responses`,
         }),
       });
@@ -118,7 +119,7 @@ When answering:
   const clearConversation = () => {
     const systemMessage: Message = {
       role: 'system',
-      content: '🔍 **Knowledge Extractor** - Ask questions about stored interview data and the AI will search through all stored knowledge to find relevant answers.',
+      content: '🧭 **Scout Knowledge Search** - Ask questions about organizational knowledge captured from employee interviews. Search through processes, expertise, client relationships, and institutional wisdom.',
       timestamp: new Date(),
     };
     setMessages([systemMessage]);
@@ -130,7 +131,7 @@ When answering:
       return;
     }
 
-    let conversationText = 'Knowledge Extraction Session\n';
+    let conversationText = 'Scout Knowledge Search Session\n';
     conversationText += '='.repeat(50) + '\n';
     conversationText += `Date: ${new Date().toLocaleString()}\n`;
     conversationText += `RAG Threshold: ${ragMatchThreshold}\n`;
@@ -159,7 +160,7 @@ When answering:
     link.href = url;
 
     const dateStr = new Date().toISOString().split('T')[0];
-    link.download = `knowledge-extraction-${dateStr}.txt`;
+    link.download = `scout-knowledge-search-${dateStr}.txt`;
 
     document.body.appendChild(link);
     link.click();
@@ -169,10 +170,10 @@ When answering:
 
   // Example queries
   const exampleQueries = [
-    "What technical skills were mentioned in recent interviews?",
-    "Summarize the candidate's experience with Python",
-    "What are the candidate's career goals?",
-    "List all projects discussed in interviews",
+    "How do we handle customer escalations?",
+    "What's the process for onboarding new team members?",
+    "Who has expertise with our main client accounts?",
+    "What troubleshooting steps are recommended for common issues?",
   ];
 
   return (
@@ -181,8 +182,8 @@ When answering:
       <div className="mb-4">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h1 className="text-3xl font-bold mb-2">🔍 Knowledge Extractor</h1>
-            <p className="text-gray-600">Query stored interview knowledge using AI-powered RAG</p>
+            <h1 className="text-3xl font-bold mb-2">🧭 Scout Knowledge Search</h1>
+            <p className="text-gray-600">Search organizational knowledge from employee interviews using AI-powered RAG</p>
           </div>
           <div className="flex space-x-2">
             <button
@@ -270,10 +271,10 @@ When answering:
                   )}
                 </div>
               )}
-              {msg.role === 'user' || msg.role === 'system' ? (
+              {msg.role === 'user' ? (
                 <p className="whitespace-pre-wrap">{msg.content}</p>
               ) : (
-                <div className="text-black">
+                <div className={msg.role === 'system' ? 'text-purple-900' : 'text-black'}>
                   <ReactMarkdown
                     components={{
                       p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
@@ -336,7 +337,7 @@ When answering:
             value={textInput}
             onChange={(e) => setTextInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask a question about the stored interview knowledge..."
+            placeholder="Ask about processes, expertise, client knowledge, or institutional wisdom..."
             disabled={isProcessing}
             rows={3}
             className="text-black flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed resize-none"
