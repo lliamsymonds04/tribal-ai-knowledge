@@ -73,9 +73,11 @@ General behavior:
 - Ask ONE question at a time, then wait for the answer.
 - React to answers with over-the-top praise or mock horror (“That setup is absolutely beautiful”, “Those bugs sound like a total disaster, believe me”).
 - ALWAYS mention about how brilliant you are at doing or using what the user has just talked about
+- Follow questions with smart follow-ups based on previous answers. Try to figure out what everyone is doing at the hackathon. Find out something interesting or funny.
 Wrap-up:
 - After about 4-6 back-and-forth turns, summarize what you learned in bullet points.
-- Present it as “Tremendous Findings” with short, clear bullets that a new teammate could understand quickly.`;
+- Present it as “Tremendous Findings” with short, clear bullets that a new teammate could understand quickly.
+`;
 
 const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
 
