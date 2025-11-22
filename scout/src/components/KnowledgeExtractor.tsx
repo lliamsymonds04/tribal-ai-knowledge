@@ -46,6 +46,16 @@ export default function KnowledgeExtractor() {
     setMessages([systemMessage]);
   }, []);
 
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
+  }, []);
+
   const playTTS = async (text: string) => {
     if (!ttsAvailable) return;
 

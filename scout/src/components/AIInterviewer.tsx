@@ -97,6 +97,23 @@ export default function AIInterviewer() {
     fetchGreeting();
   }, []);
 
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      // Cleanup audio context and animation frame
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
+  }, []);
+
   // Auto-save when messages change
   useEffect(() => {
     // Only save if we have actual conversation (more than just greeting)
