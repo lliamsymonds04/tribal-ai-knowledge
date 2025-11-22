@@ -11,8 +11,10 @@ export default function AvatarDisplay({
     audioAmplitude = 0,
 }: AvatarDisplayProps) {
     // Apply positive y translation based on amplitude - scale with container size
-    // Convert 20px at fullscreen to percentage (20px relative to typical fullscreen height ~1000px ≈ 2%)
-    const mouthTranslateYPercent = audioAmplitude * 20;
+    // Use power function to make response more sudden (less floaty)
+    // Square root makes small values respond faster, larger values less extreme
+    const responsiveAmplitude = Math.pow(audioAmplitude, 0.7);
+    const mouthTranslateYPercent = responsiveAmplitude * 20;
 
     return (
         <div className="h-full bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center relative overflow-hidden">
