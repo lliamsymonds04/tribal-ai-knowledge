@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import AudioRecorder from './AudioRecorder';
 import AvatarDisplay from './AvatarDisplay';
@@ -12,11 +13,14 @@ interface Message {
 }
 
 export default function AIInterviewer() {
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [textInput, setTextInput] = useState<string>('');
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
   const [ttsAvailable, setTtsAvailable] = useState<boolean>(true);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -46,6 +50,11 @@ export default function AIInterviewer() {
             content: data.message,
             timestamp: new Date(),
           }]);
+
+          // Play TTS for initial greeting
+          if (ttsAvailable) {
+            await playTTS(data.message);
+          }
         }
       } catch (err) {
         console.error('Failed to initialize interview:', err);
@@ -154,6 +163,12 @@ export default function AIInterviewer() {
         await playTTS(chatData.message);
       }
 
+      // Auto-save to database after each exchange
+      // Use setTimeout to avoid blocking the UI
+      setTimeout(() => {
+        saveToDatabase();
+      }, 500);
+
     } catch (err: any) {
       console.error('Chat error:', err);
       // Error will be shown in a message format
@@ -218,12 +233,82 @@ export default function AIInterviewer() {
     URL.revokeObjectURL(url);
   };
 
+  const saveToDatabase = async () => {
+    // Skip if no messages or only initial greeting or already saving
+    if (messages.length <= 1 || isSaving) {
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+
+      // Format conversation as text
+      let conversationText = 'AI Interview Transcript\n';
+      conversationText += '='.repeat(50) + '\n';
+      conversationText += `Date: ${new Date().toLocaleString()}\n`;
+      conversationText += '='.repeat(50) + '\n\n';
+
+      messages.forEach((msg) => {
+        const speaker = msg.role === 'user' ? 'CANDIDATE' : 'AI INTERVIEWER';
+        const time = msg.timestamp.toLocaleTimeString();
+        conversationText += `[${time}] ${speaker}:\n${msg.content}\n\n`;
+      });
+
+      // Save to database with embeddings
+      const response = await fetch('/api/embeddings/store', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: conversationText,
+          splitIntoChunks: true, // Split long conversations into chunks
+          metadata: {
+            type: 'interview_transcript',
+            date: new Date().toISOString(),
+            message_count: messages.length,
+            duration_minutes: Math.round(
+              (messages[messages.length - 1].timestamp.getTime() -
+               messages[0].timestamp.getTime()) / 60000
+            ),
+          },
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save conversation');
+      }
+
+      setLastSaved(new Date());
+      console.log(`✅ Interview auto-saved: ${data.stored || 1} document(s) stored`);
+
+    } catch (error: any) {
+      console.error('❌ Auto-save error:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen max-w-4xl mx-auto p-4">
       {/* Header */}
       <div className="mb-4 flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold mb-2 font-jetbrains">Scout</h1>
+          <div className="flex items-center space-x-4">
+            <p className="text-gray-600">Speak or type your responses</p>
+            {isSaving && (
+              <span className="text-xs text-gray-500 flex items-center">
+                <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin inline-block mr-1" />
+                Saving...
+              </span>
+            )}
+            {!isSaving && lastSaved && (
+              <span className="text-xs text-gray-500">
+                Last saved: {lastSaved.toLocaleTimeString()}
+              </span>
+            )}
+          </div>
           {isPlayingAudio && (
             <div className="flex items-center space-x-2 mt-2">
               <div className="flex space-x-1">
@@ -262,6 +347,16 @@ export default function AIInterviewer() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
             </svg>
             Download
+          </button>
+          <button
+            onClick={() => router.push('/extractor')}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+            title="Go to Knowledge Extractor to query saved interviews"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 inline-block mr-2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+            Extractor
           </button>
         </div>
       </div>
