@@ -32,6 +32,10 @@ export default function AIInterviewer() {
   const [error, setError] = useState<string>("");
   const [isErrorFadingOut, setIsErrorFadingOut] = useState(false);
   const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [audioAmplitude, setAudioAmplitude] = useState<number>(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyzerRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -135,25 +139,84 @@ export default function AIInterviewer() {
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
 
-      // Create and play audio element
+      // Initialize Web Audio API for amplitude analysis
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+
+      const audioContext = audioContextRef.current;
+
+      // Create analyzer node
+      if (!analyzerRef.current) {
+        analyzerRef.current = audioContext.createAnalyser();
+        analyzerRef.current.fftSize = 256; // Smaller FFT for better performance
+        analyzerRef.current.smoothingTimeConstant = 0.3; // Balanced smoothing
+      }
+
+      const analyzer = analyzerRef.current;
+
+      // Create audio element
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
 
+      // Connect audio to analyzer
+      const source = audioContext.createMediaElementSource(audio);
+      source.connect(analyzer);
+      analyzer.connect(audioContext.destination);
+
+      // Start amplitude tracking
+      const dataArray = new Uint8Array(analyzer.fftSize);
+
+      const updateAmplitude = () => {
+        if (!audioRef.current || audioRef.current.paused || audioRef.current.ended) {
+          setAudioAmplitude(0);
+          return;
+        }
+
+        analyzer.getByteTimeDomainData(dataArray);
+
+        // Calculate RMS (Root Mean Square) for amplitude
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          const normalized = (dataArray[i] - 128) / 128; // Normalize to -1 to 1
+          sum += normalized * normalized;
+        }
+        const rms = Math.sqrt(sum / dataArray.length);
+
+        // Apply smoothing and set amplitude (scaled to 0-1 range)
+        setAudioAmplitude(prev => {
+          const smoothingFactor = 0.3;
+          return prev * (1 - smoothingFactor) + rms * smoothingFactor * 3; // *3 for better visual range
+        });
+
+        animationFrameRef.current = requestAnimationFrame(updateAmplitude);
+      };
+
       audio.onended = () => {
         setIsPlayingAudio(false);
+        setAudioAmplitude(0);
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
         URL.revokeObjectURL(audioUrl);
       };
 
       audio.onerror = () => {
         setIsPlayingAudio(false);
+        setAudioAmplitude(0);
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
         URL.revokeObjectURL(audioUrl);
       };
 
       await audio.play();
+      updateAmplitude(); // Start amplitude tracking
 
     } catch (error) {
       console.error('TTS playback error:', error);
       setIsPlayingAudio(false);
+      setAudioAmplitude(0);
     }
   };
 
@@ -162,6 +225,10 @@ export default function AIInterviewer() {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       setIsPlayingAudio(false);
+      setAudioAmplitude(0);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
     }
   };
 
@@ -463,8 +530,8 @@ export default function AIInterviewer() {
       </div>
 
       {/* Avatar Display */}
-      <div className="mb-4">
-        <AvatarDisplay isSpeaking={isPlayingAudio} />
+      <div className="min-h-1/3 mb-4">
+        <AvatarDisplay isSpeaking={isPlayingAudio} audioAmplitude={audioAmplitude} />
       </div>
 
       {/* Chat Messages */}
