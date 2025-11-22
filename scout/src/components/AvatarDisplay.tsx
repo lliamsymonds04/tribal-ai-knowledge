@@ -1,40 +1,49 @@
-'use client';
+"use client";
+import Image from "next/image";
 
 interface AvatarDisplayProps {
-  isSpeaking?: boolean;
+    isSpeaking?: boolean;
+    audioAmplitude?: number;
 }
 
-export default function AvatarDisplay({ isSpeaking = false }: AvatarDisplayProps) {
-  return (
-    <div className="w-full h-64 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center relative overflow-hidden">
-      {/* Placeholder Avatar */}
-      <div className="text-center">
-        <div className={`w-32 h-32 mx-auto mb-4 bg-gray-700 rounded-full flex items-center justify-center transition-all ${
-          isSpeaking ? 'ring-4 ring-blue-500 ring-opacity-50 animate-pulse' : ''
-        }`}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="w-16 h-16 text-gray-500"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
-            />
-          </svg>
-        </div>
-        <p className="text-gray-400 text-sm">
-          {isSpeaking ? 'Speaking...' : 'Avatar Placeholder'}
-        </p>
-      </div>
+export default function AvatarDisplay({
+    isSpeaking = false,
+    audioAmplitude = 0,
+}: AvatarDisplayProps) {
+    const ringOpacity = audioAmplitude * 0.5; // Opacity from 30% to 80%
+    // Apply positive y translation based on amplitude (0-20px range for mouth opening)
+    const mouthTranslateY = audioAmplitude * 20;
 
-      {/* Decorative Elements */}
-      <div className="absolute top-4 right-4 w-16 h-16 bg-blue-500/10 rounded-full blur-xl"></div>
-      <div className="absolute bottom-4 left-4 w-20 h-20 bg-purple-500/10 rounded-full blur-xl"></div>
-    </div>
-  );
+    return (
+        <div className="h-full bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center relative overflow-hidden">
+            {/* Base Avatar (blinking gif) - Lower z-index */}
+            <div className="absolute inset-0 max-w">
+                <Image
+                    src="/trump_blinking_no_mouth.gif"
+                    alt="Avatar"
+                    width={1524}
+                    height={1016}
+                    className="object-cover"
+                />
+            </div>
+            {/* Mouth overlay - Higher z-index */}
+            <div
+                className="absolute z-20 drop-shadow-md drop-shadow-black/40 translate-y-5 duration-0"
+                style={{
+                    transform: `translateY(${mouthTranslateY}px)`
+                }}
+            >
+                <Image
+                    src="/trump_mouth_only.png"
+                    alt="Avatar's Mouth"
+                    width={56}
+                    height={85}
+                />
+            </div>
+            {/* Text Overlay */}
+            <p className="text-white bg-black px-2 text-lg absolute bottom-4 z-30">
+                {isSpeaking ? "Speaking..." : "Donald Trump"}
+            </p>
+        </div>
+    );
 }
