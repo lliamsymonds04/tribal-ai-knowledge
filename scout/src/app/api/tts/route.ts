@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 // Eleven Labs API endpoint
 const ELEVEN_LABS_API_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
 
-// Default voice ID (Rachel - a professional, clear voice)
-const DEFAULT_VOICE_ID = '21m00Tcm4TlvDq8ikWAM';
+// Default voice ID
+const DEFAULT_VOICE_ID = 'CwhRBWXzGAHq8TQ4Fs17';
 
 interface TTSRequest {
   text: string;
