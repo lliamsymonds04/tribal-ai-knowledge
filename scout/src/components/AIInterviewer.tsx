@@ -50,6 +50,11 @@ export default function AIInterviewer() {
             content: data.message,
             timestamp: new Date(),
           }]);
+
+          // Play TTS for initial greeting
+          if (ttsAvailable) {
+            await playTTS(data.message);
+          }
         }
       } catch (err) {
         console.error('Failed to initialize interview:', err);
