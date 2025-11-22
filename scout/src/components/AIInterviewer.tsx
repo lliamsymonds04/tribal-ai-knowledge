@@ -213,7 +213,7 @@ export default function AIInterviewer() {
         throw new Error(chatData.error || 'Failed to get response from AI');
       }
 
-      // Add AI response to history
+      // Add Trump's response to history
       const aiMessage: Message = {
         role: 'assistant',
         content: chatData.message,
@@ -222,7 +222,7 @@ export default function AIInterviewer() {
 
       setMessages(prev => [...prev, aiMessage]);
 
-      // Play TTS for AI response (if available and enabled)
+      // Play TTS for Trump's response (if available and enabled)
       if (ttsEnabled && ttsAvailable) {
         await playTTS(chatData.message);
       }
@@ -262,13 +262,13 @@ export default function AIInterviewer() {
     }
 
     // Format conversation as text
-    let conversationText = 'AI Interview Transcript\n';
+    let conversationText = 'Trump Interview Transcript\n';
     conversationText += '='.repeat(50) + '\n';
     conversationText += `Date: ${new Date().toLocaleString()}\n`;
     conversationText += '='.repeat(50) + '\n\n';
 
     messages.forEach((msg, index) => {
-      const speaker = msg.role === 'user' ? 'CANDIDATE' : 'AI INTERVIEWER';
+      const speaker = msg.role === 'user' ? 'YOU' : 'TRUMP';
       const time = msg.timestamp.toLocaleTimeString();
 
       conversationText += `[${time}] ${speaker}:\n`;
@@ -301,13 +301,13 @@ export default function AIInterviewer() {
       setIsSaving(true);
 
       // Format conversation as text
-      let conversationText = 'AI Interview Transcript\n';
+      let conversationText = 'Trump Interview Transcript\n';
       conversationText += '='.repeat(50) + '\n';
       conversationText += `Date: ${new Date().toLocaleString()}\n`;
       conversationText += '='.repeat(50) + '\n\n';
 
       messages.forEach((msg) => {
-        const speaker = msg.role === 'user' ? 'CANDIDATE' : 'AI INTERVIEWER';
+        const speaker = msg.role === 'user' ? 'YOU' : 'TRUMP';
         const time = msg.timestamp.toLocaleTimeString();
         conversationText += `[${time}] ${speaker}:\n${msg.content}\n\n`;
       });
@@ -353,9 +353,9 @@ export default function AIInterviewer() {
       <div className="flex flex-col items-center justify-center h-screen max-w-4xl mx-auto p-4">
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold mb-4 font-jetbrains">Scout</h1>
-          <p className="text-xl text-gray-600 mb-8">AI Interview Assistant</p>
+          <p className="text-xl text-gray-600 mb-8">Trump Interview Assistant</p>
           <p className="text-gray-500 mb-8 max-w-md">
-            Click the button below to begin your interview. The AI interviewer will greet you and guide you through the conversation.
+            Click the button below to begin your interview. Trump will greet you and guide you through the conversation - it's going to be tremendous, believe me.
           </p>
         </div>
         <button
@@ -418,7 +418,7 @@ export default function AIInterviewer() {
                 <div className="w-1 h-4 bg-blue-600 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
                 <div className="w-1 h-4 bg-blue-600 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
               </div>
-              <span className="text-sm text-blue-600">AI is speaking...</span>
+              <span className="text-sm text-blue-600">Trump is speaking...</span>
             </div>
           )}
         </div>
@@ -452,7 +452,7 @@ export default function AIInterviewer() {
           <button
             onClick={() => router.push('/extractor')}
             className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
-            title="Go to Knowledge Extractor to query saved interviews"
+            title="Ask Trump about saved knowledge"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 inline-block mr-2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -481,7 +481,7 @@ export default function AIInterviewer() {
               }`}
             >
               <div className="text-xs opacity-70 mb-1">
-                {msg.role === 'user' ? 'You' : 'AI Interviewer'}
+                {msg.role === 'user' ? 'You' : 'Trump'}
               </div>
               {msg.role === 'user' ? (
                 <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -514,7 +514,7 @@ export default function AIInterviewer() {
             <div className="bg-white border border-gray-200 rounded-lg p-4">
               <div className="flex items-center space-x-2">
                 <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                <span className="text-gray-600">AI is thinking...</span>
+                <span className="text-gray-600">Trump is thinking... making it tremendous...</span>
               </div>
             </div>
           </div>
