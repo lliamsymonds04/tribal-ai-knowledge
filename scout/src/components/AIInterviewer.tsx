@@ -64,6 +64,22 @@ export default function AIInterviewer() {
     initializeInterview();
   }, []);
 
+  // Auto-save when messages change
+  useEffect(() => {
+    // Only save if we have actual conversation (more than just greeting)
+    if (messages.length > 1) {
+      // Debounce: wait a bit before saving to avoid too many saves
+      const timeoutId = setTimeout(() => {
+        // Only save if not currently saving
+        if (!isSaving) {
+          saveToDatabase();
+        }
+      }, 2000); // 2 second debounce
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages]); // Only depend on messages, not isSaving!
+
   const playTTS = async (text: string) => {
     if (!ttsAvailable) return;
 
@@ -162,12 +178,6 @@ export default function AIInterviewer() {
       if (ttsAvailable) {
         await playTTS(chatData.message);
       }
-
-      // Auto-save to database after each exchange
-      // Use setTimeout to avoid blocking the UI
-      setTimeout(() => {
-        saveToDatabase();
-      }, 500);
 
     } catch (err: any) {
       console.error('Chat error:', err);

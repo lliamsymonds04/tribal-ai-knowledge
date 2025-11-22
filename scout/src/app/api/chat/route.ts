@@ -68,9 +68,16 @@ export async function POST(request: NextRequest) {
     // Retrieve relevant context using RAG if enabled
     let relevantContext = "";
     if (useRAG) {
-      try {
-        const queryEmbedding = await generateEmbedding(message);
+      console.log('🔍 RAG ENABLED - Starting retrieval...');
+      console.log('📝 User query:', message);
+      console.log('⚙️ RAG settings:', { ragMatchThreshold, ragMatchCount });
 
+      try {
+        console.log('🧮 Generating embedding for query...');
+        const queryEmbedding = await generateEmbedding(message);
+        console.log('✅ Embedding generated, length:', queryEmbedding.length);
+
+        console.log('🔎 Searching database with match_interview_documents...');
         const { data, error } = await supabaseAdmin.rpc(
           "match_interview_documents",
           {
@@ -81,25 +88,42 @@ export async function POST(request: NextRequest) {
         );
 
         if (error) {
-          console.error("Error retrieving RAG context:", error);
-        } else if (data && data.length > 0) {
-          relevantContext =
-            "\n\nRelevant context from previous interviews:\n" +
-            data
-              .map(
-                (doc: {
-                  content: string;
-                  metadata: Record<string, unknown>;
-                  similarity: number;
-                }) =>
-                  `- ${doc.content} (relevance: ${(doc.similarity * 100).toFixed(1)}%)`,
-              )
-              .join("\n");
+          console.error("❌ Error retrieving RAG context:", error);
+        } else {
+          console.log('📊 Search complete. Results found:', data?.length || 0);
+
+          if (data && data.length > 0) {
+            console.log('📄 Top results:');
+            data.forEach((doc: any, i: number) => {
+              console.log(`  ${i + 1}. Similarity: ${(doc.similarity * 100).toFixed(1)}%`);
+              console.log(`     Content preview: ${doc.content.substring(0, 100)}...`);
+              console.log(`     Metadata:`, doc.metadata);
+            });
+
+            relevantContext =
+              "\n\nRelevant context from previous interviews:\n" +
+              data
+                .map(
+                  (doc: {
+                    content: string;
+                    metadata: Record<string, unknown>;
+                    similarity: number;
+                  }) =>
+                    `- ${doc.content} (relevance: ${(doc.similarity * 100).toFixed(1)}%)`,
+                )
+                .join("\n");
+
+            console.log('✅ Context built, length:', relevantContext.length, 'characters');
+          } else {
+            console.log('⚠️ No matching documents found (threshold may be too high)');
+          }
         }
       } catch (ragError) {
-        console.error("RAG retrieval error:", ragError);
+        console.error("❌ RAG retrieval error:", ragError);
         // Continue without RAG context if there's an error
       }
+    } else {
+      console.log('ℹ️ RAG is disabled for this request');
     }
 
     // Initialize model with API key
@@ -116,6 +140,12 @@ export async function POST(request: NextRequest) {
     const enhancedSystemPrompt = relevantContext
       ? `${systemPrompt}${relevantContext}`
       : systemPrompt;
+
+    if (useRAG) {
+      console.log('📤 Sending to Claude with context. System prompt length:', enhancedSystemPrompt.length);
+      console.log('📋 Context included:', relevantContext.length > 0 ? 'YES' : 'NO');
+    }
+
     messages.push(new SystemMessage(enhancedSystemPrompt));
 
     // Add conversation history
