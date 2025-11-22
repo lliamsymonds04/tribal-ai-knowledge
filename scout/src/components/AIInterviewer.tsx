@@ -441,7 +441,7 @@ export default function AIInterviewer() {
   }
 
   return (
-    <div className="flex flex-col h-screen max-w-4xl mx-auto p-4">
+    <div className="flex flex-col h-screen max-w-4xl mx-auto p-4 overflow-x-hidden">
       {/* Error Toast */}
       {error && (
         <div
@@ -576,8 +576,8 @@ export default function AIInterviewer() {
       </div>
 
       {/* Input Controls */}
-      <div className="bg-primary border-t border-border p-4 rounded-lg">
-        <div className="flex items-center space-x-3">
+      <div className="bg-primary border-t border-border p-2 sm:p-4 rounded-lg">
+        <div className="flex items-center space-x-1 sm:space-x-3">
 
           {/* Text Input */}
           <input
@@ -585,14 +585,14 @@ export default function AIInterviewer() {
             value={textInput}
             onChange={(e) => setTextInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Or type your message..."
+            placeholder="Type message..."
             disabled={isProcessing}
-            className="bg-tertiary flex-1 px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="bg-tertiary flex-1 min-w-0 px-2 sm:px-4 py-2 sm:py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed text-sm sm:text-base"
           />
           <button
             onClick={handleTextSubmit}
             disabled={!textInput.trim() || isProcessing}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+            className="px-3 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium text-sm sm:text-base whitespace-nowrap"
           >
             Send
           </button>
