@@ -178,8 +178,6 @@ export async function POST(request: NextRequest) {
         console.error("❌ RAG retrieval error:", ragError);
         // Continue without RAG context if there's an error
       }
-    } else {
-      console.log('ℹ️ RAG is disabled for this request');
     }
 
     // Initialize model with API key
